@@ -2,9 +2,12 @@ package main
 
 import (
 	"flag"
+	"github.com/domgoer/manba-ingress/pkg/ingress/annotations"
 	"os"
 	"strings"
 	"time"
+
+	"k8s.io/apimachinery/pkg/util/uuid"
 
 	"github.com/golang/glog"
 	"github.com/spf13/pflag"
@@ -58,9 +61,9 @@ TLS handshake`)
 	// Resource filtering
 	flags.String("watch-namespace", apiv1.NamespaceAll,
 		`Namespace to watch for Ingress. Default is to watch all namespaces`)
-	flags.String("ingress-class", "",
+	flags.String("ingress-class", annotations.DefaultIngressClass,
 		`Name of the ingress class to route through this controller.`)
-	flags.String("election-id", "ingress-controller-leader",
+	flags.String("election-id", string(uuid.NewUUID()),
 		`Election id to use for status update.`)
 	// Rutnime behavior
 	flags.Duration("sync-period", 600*time.Second,

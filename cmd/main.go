@@ -3,11 +3,19 @@ package main
 import (
 	"fmt"
 	"math/rand"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
+	"github.com/domgoer/manba-ingress/pkg/ingress/annotations"
+	"github.com/domgoer/manba-ingress/pkg/ingress/store"
+
 	cache2 "github.com/domgoer/manba-ingress/pkg/cache"
+	"github.com/domgoer/manba-ingress/pkg/ingress/controller"
 	manbaClient "github.com/fagongzi/manba/pkg/client"
 	"github.com/golang/glog"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	k8sVersion "k8s.io/apimachinery/pkg/version"
@@ -35,9 +43,19 @@ func main() {
 	}
 
 	// init k8s client
-	restCfg, k8sClient, err := createApiserverClient(cfg.APIServerHost, cfg.KubeConfigFilePath)
+	_, kubeClient, err := createApiserverClient(cfg.APIServerHost, cfg.KubeConfigFilePath)
 	if err != nil {
 		glog.Fatalf("create k8s client failed, err: %v", err)
+	}
+
+	// check namespace exists
+	if cfg.WatchNamespace != "" {
+		_, err = kubeClient.CoreV1().Namespaces().Get(cfg.WatchNamespace,
+			metav1.GetOptions{})
+		if err != nil {
+			glog.Fatalf("no namespace with name %v found: %v",
+				cfg.WatchNamespace, err)
+		}
 	}
 
 	// init manba client
@@ -46,8 +64,12 @@ func main() {
 		glog.Fatalf("create manba client failed, err: %v", err)
 	}
 
+	controllerConfig := controllerConfigFromCLIConfig(cfg)
+	controllerConfig.KubeClient = kubeClient
+	controllerConfig.Manba.Client = manbaCli
+
 	var synced []cache.InformerSynced
-	informers := cache2.CreateInformers(k8sClient, cfg.SyncPeriod, cfg.WatchNamespace)
+	informers := cache2.CreateInformers(kubeClient, cfg.SyncPeriod, cfg.WatchNamespace)
 	stopCh := make(chan struct{})
 	for _, informer := range informers {
 		go informer.Run(stopCh)
@@ -57,8 +79,17 @@ func main() {
 		runtime.HandleError(fmt.Errorf("Timed out waiting for caches to sync"))
 	}
 
-	fmt.Println(cfg)
+	s := store.New(annotations.IngressClassValidatorFuncFromObjectMeta(controllerConfig.IngressClass))
+	manbaController, err := controller.NewManbaController(controllerConfig, s)
+	if err != nil {
+		glog.Fatalf("create manba controller failed, err: %v", err)
+	}
 
+	go handleSigterm(manbaController, stopCh, func(code int) {
+		os.Exit(code)
+	})
+
+	manbaController.Start()
 }
 
 // createApiserverClient creates new Kubernetes Apiserver client. When kubeconfig or apiserverHost param is empty
@@ -124,4 +155,37 @@ func createApiserverClient(apiserverHost string, kubeConfig string) (*rest.Confi
 		v.Major, v.Minor, v.GitVersion, v.GitTreeState, v.GitCommit, v.Platform)
 
 	return cfg, client, nil
+}
+
+func controllerConfigFromCLIConfig(cfg Config) controller.Config {
+	return controller.Config{
+		ElectionID:    cfg.ElectionID,
+		IngressClass:  cfg.IngressClass,
+		ResyncPeriod:  cfg.SyncPeriod,
+		SyncRateLimit: cfg.SyncRateLimit,
+		Namespace:     cfg.WatchNamespace,
+	}
+}
+
+type exiter func(code int)
+
+func handleSigterm(manbaC *controller.ManbaController, stopCh chan struct{},
+	exit exiter) {
+	signalChan := make(chan os.Signal, 1)
+	signal.Notify(signalChan, syscall.SIGTERM)
+	<-signalChan
+	glog.Infof("Received SIGTERM, shutting down")
+
+	exitCode := 0
+	close(stopCh)
+	if err := manbaC.Stop(); err != nil {
+		glog.Infof("Error during shutdown %v", err)
+		exitCode = 1
+	}
+
+	glog.Infof("Handled quit, awaiting pod deletion")
+	time.Sleep(10 * time.Second)
+
+	glog.Infof("Exiting with %v", exitCode)
+	exit(exitCode)
 }

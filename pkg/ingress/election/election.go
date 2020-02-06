@@ -1,6 +1,7 @@
 package election
 
 import (
+	"context"
 	"os"
 	"time"
 
@@ -30,6 +31,7 @@ type Config struct {
 
 type Elector interface {
 	IsLeader() bool
+	Run(context.Context)
 }
 
 // NewElection returns leaderelection.LeaderElector to start election, should use leaderelection.LeaderElector.Run(ctx)
