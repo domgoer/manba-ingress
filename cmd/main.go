@@ -38,8 +38,14 @@ func main() {
 		glog.Fatal(err)
 	}
 
+	// validate flags
 	if cfg.SyncPeriod.Seconds() < 10 {
-		glog.Fatalf("resync period (%vs) is too low", cfg.SyncPeriod.Seconds())
+		glog.Fatalf("resync period (%vs) is too low ", cfg.SyncPeriod.Seconds())
+	}
+
+	if cfg.PublishService == "" && cfg.PublishStatusAddress == "" {
+		glog.Fatal("either --publish-service or --publish-status-address ",
+			"must be specified")
 	}
 
 	// init k8s client

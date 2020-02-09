@@ -2,10 +2,11 @@ package main
 
 import (
 	"flag"
-	"github.com/domgoer/manba-ingress/pkg/ingress/annotations"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/domgoer/manba-ingress/pkg/ingress/annotations"
 
 	"k8s.io/apimachinery/pkg/util/uuid"
 
@@ -31,13 +32,17 @@ type Config struct {
 	IngressClass   string
 	ElectionID     string
 
-	// Rutnime behavior
+	// Runtime behavior
 	SyncPeriod    time.Duration
 	SyncRateLimit float32
 
 	// k8s connection details
 	APIServerHost      string
 	KubeConfigFilePath string
+
+	// Ingress Status publish resource
+	PublishService       string
+	PublishStatusAddress string
 }
 
 func flagSet() *pflag.FlagSet {
@@ -70,6 +75,16 @@ TLS handshake`)
 		`Relist and confirm cloud resources this often.`)
 	flags.Float32("sync-rate-limit", 0.3,
 		`Define the sync frequency upper limit`)
+
+	// Ingress Status publish resource
+	flags.String("publish-service", "",
+		`Service fronting the ingress controllers. Takes the form namespace/name.
+The controller will set the endpoint records on the ingress objects
+to reflect those on the service.`)
+	flags.String("publish-status-address", "",
+		`User customized address to be set in the status of ingress resources.
+The controller will set the endpoint records on the
+ingress using this address.`)
 
 	// k8s connection details
 	flags.String("apiserver-host", "",
@@ -127,6 +142,10 @@ func parseFlags() (cfg Config, err error) {
 	// k8s connection details
 	cfg.APIServerHost = viper.GetString("apiserver-host")
 	cfg.KubeConfigFilePath = viper.GetString("kubeconfig")
+
+	// Ingress Status publish resource
+	cfg.PublishService = viper.GetString("publish-service")
+	cfg.PublishStatusAddress = viper.GetString("publish-status-address")
 
 	return
 }

@@ -7,6 +7,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/domgoer/manba-ingress/pkg/ingress/k8s"
+	"github.com/domgoer/manba-ingress/pkg/ingress/status"
+
 	"github.com/domgoer/manba-ingress/pkg/ingress/election"
 	"github.com/domgoer/manba-ingress/pkg/ingress/store"
 	"github.com/domgoer/manba-ingress/pkg/ingress/task"
@@ -15,7 +18,6 @@ import (
 	"github.com/golang/glog"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/util/flowcontrol"
 )
 
@@ -37,6 +39,10 @@ type Config struct {
 	SyncRateLimit float32
 
 	Namespace string
+
+	UpdateStatus         bool
+	PublishService       string
+	PublishStatusAddress string
 }
 
 type ManbaController struct {
@@ -52,6 +58,8 @@ type ManbaController struct {
 
 	stopLock       sync.Mutex
 	isShuttingDown bool
+
+	syncStatus status.Syncer
 }
 
 func NewManbaController(cfg Config, store store.Store) (*ManbaController, error) {
@@ -64,19 +72,40 @@ func NewManbaController(cfg Config, store store.Store) (*ManbaController, error)
 	}
 	m.syncQueue = task.NewTaskQueue(m.syncIngress)
 
+	pod, err := k8s.GetPodDetails(cfg.KubeClient)
+	if err != nil {
+		glog.Fatalf("unexpected error obtaining pod information: %v", err)
+	}
+
 	// init leader election
 	resourceName := fmt.Sprintf("%s-ingress-controller", cfg.ElectionID)
-	elector, err := election.NewElection(election.Config{
+
+	ec := election.Config{
 		ResourceName:      resourceName,
 		ResourceNamespace: cfg.Namespace,
 		ElectionID:        cfg.ElectionID,
-		Callbacks: leaderelection.LeaderCallbacks{
-			OnStartedLeading: func(context.Context) {
+	}
+
+	if cfg.UpdateStatus {
+		m.syncStatus = status.NewStatusSyncer(pod, status.Config{
+			Client:               cfg.KubeClient,
+			PublishStatusAddress: cfg.PublishStatusAddress,
+			PublishService:       cfg.PublishService,
+			ElectionID:           cfg.ElectionID,
+			// TODO: update status on shutdown
+			UpdateStatusOnShutdown: false,
+			IngressLister:          store,
+			OnStartedLeading: func() {
 				// force a sync
 				m.syncQueue.Enqueue(&networkingv1beta1.Ingress{})
 			},
-		},
-	}, cfg.KubeClient)
+		})
+		ec.Callbacks = m.syncStatus.Callbacks()
+	} else {
+		glog.Warning("Update of ingress status is disabled (flag --update-status=false was specified)")
+	}
+
+	elector, err := election.NewElection(ec, cfg.KubeClient)
 	if err != nil {
 		return nil, err
 	}
@@ -114,6 +143,10 @@ func (m *ManbaController) Start() {
 
 	go m.elector.Run(context.Background())
 
+	if m.syncStatus != nil {
+		m.syncStatus.Run(m.stopCh)
+	}
+
 	go m.syncQueue.Run(time.Second, m.stopCh)
 	// force initial sync
 	m.syncQueue.Enqueue(&networkingv1beta1.Ingress{})
@@ -150,5 +183,9 @@ func (m *ManbaController) Stop() error {
 	glog.Info("Shutting down controller queues")
 	close(m.stopCh)
 	go m.syncQueue.Shutdown()
+
+	if m.syncStatus != nil {
+		m.syncStatus.Shutdown(m.elector.IsLeader())
+	}
 	return nil
 }
