@@ -15,14 +15,14 @@ require (
 	github.com/imdario/mergo v0.3.8 // indirect
 	github.com/labstack/echo v3.3.10+incompatible // indirect
 	github.com/labstack/gommon v0.3.0 // indirect
-	github.com/pkg/errors v0.8.0
+	github.com/pkg/errors v0.9.1
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.6.2
 	github.com/valyala/fasttemplate v1.1.0 // indirect
 	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
 	gopkg.in/go-playground/pool.v3 v3.1.1
-	k8s.io/api v0.17.2
-	k8s.io/apimachinery v0.17.2
+	k8s.io/api v0.17.3
+	k8s.io/apimachinery v0.17.3
 	k8s.io/client-go v11.0.0+incompatible
 	k8s.io/klog v1.0.0
 	k8s.io/utils v0.0.0-20200124190032-861946025e34 // indirect

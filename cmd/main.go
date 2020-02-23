@@ -23,6 +23,8 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
+
+	_ "github.com/domgoer/manba-ingress/pkg/ingress/controller/parser"
 )
 
 const (
