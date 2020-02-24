@@ -9,6 +9,7 @@ import (
 type Store interface {
 	GetEndpointsForService(namespace, name string) (*corev1.Endpoints, error)
 	ListIngresses() []*networkingv1beta1.Ingress
+	GetService(namespace, name string) (*corev1.Service, error)
 }
 
 type store struct {
@@ -20,6 +21,10 @@ func (s *store) GetEndpointsForService(namespace, name string) (*corev1.Endpoint
 }
 
 func (s *store) ListIngresses() []*networkingv1beta1.Ingress {
+	panic("implement me")
+}
+
+func (s *store) GetService(namespace, name string) (*corev1.Service, error) {
 	panic("implement me")
 }
 

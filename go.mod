@@ -7,7 +7,7 @@ replace k8s.io/client-go v11.0.0+incompatible => k8s.io/client-go v0.0.0-2019091
 require (
 	github.com/eapache/channels v1.1.0
 	github.com/eapache/queue v1.1.0 // indirect
-	github.com/fagongzi/gateway v2.5.1+incompatible // indirect
+	github.com/fagongzi/gateway v2.5.1+incompatible
 	github.com/fagongzi/grpcx v1.1.0 // indirect
 	github.com/fagongzi/log v0.0.0-20191122063922-293b75312445 // indirect
 	github.com/fagongzi/manba v2.5.1+incompatible

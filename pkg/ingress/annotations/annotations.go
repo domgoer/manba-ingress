@@ -1,21 +1,14 @@
 package annotations
 
 import (
+	"github.com/fagongzi/manba/pkg/pb/metapb"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
 	ingressClassKey = "kubernetes.io/ingress.class"
 
-	pluginsAnnotationKey = "plugins.konghq.com"
-
-	configurationAnnotationKey = "configuration.konghq.com"
-
-	protocolAnnotationKey = "configuration.konghq.com/protocol"
-
-	protocolsAnnotationKey = "configuration.konghq.com/protocols"
-
-	clientCertAnnotationKey = "configuration.konghq.com/client-cert"
+	loadBalanceAnnotationKey = "configuration.manba.io/load-balancer"
 
 	// DefaultIngressClass defines the default class used
 	// by Kong's ingress controller.
@@ -45,4 +38,9 @@ func validIngress(ingressAnnotationValue, ingressClass string) bool {
 		return true
 	}
 	return ingressAnnotationValue == ingressClass
+}
+
+// ExtractLoadBalancer extracts the lb supplied in the annotation
+func ExtractLoadBalancer(anns map[string]string) metapb.LoadBalance {
+	return metapb.LoadBalance(metapb.LoadBalance_value[anns[loadBalanceAnnotationKey]])
 }

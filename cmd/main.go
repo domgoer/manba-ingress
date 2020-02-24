@@ -13,7 +13,7 @@ import (
 
 	cache2 "github.com/domgoer/manba-ingress/pkg/cache"
 	"github.com/domgoer/manba-ingress/pkg/ingress/controller"
-	manbaClient "github.com/fagongzi/manba/pkg/client"
+	manbaClient "github.com/fagongzi/gateway/pkg/client"
 	"github.com/golang/glog"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/runtime"

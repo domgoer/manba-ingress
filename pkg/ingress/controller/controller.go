@@ -14,7 +14,7 @@ import (
 	"github.com/domgoer/manba-ingress/pkg/ingress/store"
 	"github.com/domgoer/manba-ingress/pkg/ingress/task"
 	"github.com/eapache/channels"
-	manbaClient "github.com/fagongzi/manba/pkg/client"
+	manbaClient "github.com/fagongzi/gateway/pkg/client"
 	"github.com/golang/glog"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 	"k8s.io/client-go/kubernetes"
