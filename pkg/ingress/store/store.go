@@ -6,10 +6,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// Store is the interface that wraps the required methods to gather information
+// about ingresses, services, secrets and ingress annotations.
 type Store interface {
 	GetEndpointsForService(namespace, name string) (*corev1.Endpoints, error)
 	ListIngresses() []*networkingv1beta1.Ingress
 	GetService(namespace, name string) (*corev1.Service, error)
+	GetPodsForService(namespace, name string) ([]corev1.Pod, error)
 }
 
 type store struct {
@@ -25,6 +28,10 @@ func (s *store) ListIngresses() []*networkingv1beta1.Ingress {
 }
 
 func (s *store) GetService(namespace, name string) (*corev1.Service, error) {
+	panic("implement me")
+}
+
+func (s *store) GetPodsForService(namespace, name string) ([]corev1.Pod, error) {
 	panic("implement me")
 }
 

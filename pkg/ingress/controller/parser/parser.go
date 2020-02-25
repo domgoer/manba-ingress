@@ -2,14 +2,20 @@ package parser
 
 import (
 	"fmt"
+	"reflect"
 	"sort"
+	"strconv"
+	"strings"
 
 	"github.com/domgoer/manba-ingress/pkg/ingress/annotations"
 	"github.com/domgoer/manba-ingress/pkg/ingress/store"
+	"github.com/domgoer/manba-ingress/pkg/utils"
 	"github.com/fagongzi/gateway/pkg/pb/metapb"
+	"github.com/golang/glog"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 // Routing represents a Manba Routing and holds a reference to the Ingress
@@ -38,7 +44,7 @@ type Cluster struct {
 type Server struct {
 	metapb.Server
 
-	K8SEndpoints corev1.Endpoints
+	K8SPod corev1.Pod
 }
 
 // API contains manba API
@@ -236,24 +242,51 @@ func (p *Parser) getClusters(serviceMap map[string]Service) ([]Cluster, error) {
 			return nil, errors.Wrap(err, "get k8s service")
 		}
 
+		cluster.K8SService = *k8sSvc
+
 		cluster.Cluster.LoadBalance = annotations.ExtractLoadBalancer(k8sSvc.GetAnnotations())
+
+		svcKey := service.Namespace + "/" + service.Backend.ServiceName
+		servers, err := p.getServiceEndpoints(*k8sSvc, service.Backend.ServicePort.String())
+		if err != nil {
+			glog.Errorf("error getting endpoints for '%v' service: %v",
+				svcKey, err)
+		}
+
+		// get pods
+		pods, err := p.store.GetPodsForService(service.Namespace, service.Backend.ServiceName)
+		if err != nil {
+			glog.Errorf("error getting pods for '%v' service: %v",
+				svcKey, err)
+		}
+
+		cluster.Servers, err = p.fillServersFromPods(pods, servers)
+		if err != nil {
+			glog.Errorf("error filling servers from pods: %v : %v",
+				svcKey, err)
+		}
+
 	}
 	return clusters, nil
 }
 
-func (p *Parser) getServers(pods []corev1.Pod) ([]Server, error) {
-	var servers []Server
+func (p *Parser) fillServersFromPods(pods []corev1.Pod, svrs []Server) ([]Server, error) {
+	// key: pod ip
+	var podMap = make(map[string]corev1.Pod, len(pods))
 	for _, pod := range pods {
-		server := Server{
-			Server: metapb.Server{
-				Addr:           "",
-				MaxQPS:         0,
-				CircuitBreaker: &metapb.CircuitBreaker{},
-				HeathCheck:     &metapb.HeathCheck{},
-			},
-		}
+		podMap[pod.Status.PodIP] = pod
 	}
-	return nil, nil
+	var servers []Server
+	for _, svr := range svrs {
+		eip := strings.Split(svr.GetAddr(), ":")[0]
+		if p, ok := podMap[eip]; ok {
+			anns := p.GetAnnotations()
+			svr.MaxQPS = annotations.ExtractMaxQPS(anns)
+			svr.CircuitBreaker = annotations.ExtrackCircuitBreaker(anns)
+		}
+		servers = append(servers, svr)
+	}
+	return servers, nil
 }
 
 func (p *Parser) fillOverrides(state ManbaSate) error {
@@ -265,4 +298,139 @@ func (p *Parser) fillServers(state ManbaSate) error {
 		state.Servers = append(state.Servers, cls.Servers...)
 	}
 	return nil
+}
+
+func (p *Parser) getServiceEndpoints(svc corev1.Service,
+	backendPort string) ([]Server, error) {
+	var servers []Server
+	var endpoints []utils.Endpoint
+	var servicePort corev1.ServicePort
+	svcKey := svc.Namespace + "/" + svc.Name
+
+	for _, port := range svc.Spec.Ports {
+		// targetPort could be a string, use the name or the port (int)
+		if strconv.Itoa(int(port.Port)) == backendPort ||
+			port.TargetPort.String() == backendPort ||
+			port.Name == backendPort {
+			servicePort = port
+			break
+		}
+	}
+
+	// Ingress with an ExternalName service and no port defined in the service.
+	if len(svc.Spec.Ports) == 0 &&
+		svc.Spec.Type == corev1.ServiceTypeExternalName {
+		externalPort, err := strconv.Atoi(backendPort)
+		if err != nil {
+			glog.Warningf("only numeric ports are allowed in"+
+				" ExternalName services: %v is not valid as a TCP/UDP port",
+				backendPort)
+			return servers, nil
+		}
+
+		servicePort = corev1.ServicePort{
+			Protocol:   "TCP",
+			Port:       int32(externalPort),
+			TargetPort: intstr.FromString(backendPort),
+		}
+	}
+
+	endpoints = getEndpoints(&svc, &servicePort,
+		corev1.ProtocolTCP, p.store.GetEndpointsForService)
+	if len(endpoints) == 0 {
+		glog.Warningf("service %v does not have any active endpoints",
+			svcKey)
+	}
+	for _, endpoint := range endpoints {
+		server := Server{
+			Server: metapb.Server{
+				Addr: endpoint.String(),
+			},
+		}
+		servers = append(servers, server)
+	}
+	return servers, nil
+}
+
+// getEndpoints returns a list of <endpoint ip>:<port> for a given service/target port combination.
+func getEndpoints(
+	s *corev1.Service,
+	port *corev1.ServicePort,
+	proto corev1.Protocol,
+	getEndpoints func(string, string) (*corev1.Endpoints, error),
+) []utils.Endpoint {
+
+	upsServers := []utils.Endpoint{}
+
+	if s == nil || port == nil {
+		return upsServers
+	}
+
+	// avoid duplicated upstream servers when the service
+	// contains multiple port definitions sharing the same
+	// targetport.
+	adus := make(map[string]bool)
+
+	// ExternalName services
+	if s.Spec.Type == corev1.ServiceTypeExternalName {
+		glog.V(3).Infof("Ingress using a service %v of type=ExternalName", s.Name)
+
+		targetPort := port.TargetPort.IntValue()
+		// check for invalid port value
+		if targetPort <= 0 {
+			glog.Errorf("ExternalName service with an invalid port: %v", targetPort)
+			return upsServers
+		}
+
+		return append(upsServers, utils.Endpoint{
+			Address: s.Spec.ExternalName,
+			Port:    fmt.Sprintf("%v", targetPort),
+		})
+	}
+
+	glog.V(3).Infof("getting endpoints for service %v/%v and port %v", s.Namespace, s.Name, port.String())
+	ep, err := getEndpoints(s.Namespace, s.Name)
+	if err != nil {
+		glog.Warningf("unexpected error obtaining service endpoints: %v", err)
+		return upsServers
+	}
+
+	for _, ss := range ep.Subsets {
+		for _, epPort := range ss.Ports {
+
+			if !reflect.DeepEqual(epPort.Protocol, proto) {
+				continue
+			}
+
+			var targetPort int32
+
+			if port.Name == "" {
+				// port.Name is optional if there is only one port
+				targetPort = epPort.Port
+			} else if port.Name == epPort.Name {
+				targetPort = epPort.Port
+			}
+
+			// check for invalid port value
+			if targetPort <= 0 {
+				continue
+			}
+
+			for _, epAddress := range ss.Addresses {
+				ep := fmt.Sprintf("%v:%v", epAddress.IP, targetPort)
+				if _, exists := adus[ep]; exists {
+					continue
+				}
+				ups := utils.Endpoint{
+					Address: epAddress.IP,
+					Port:    fmt.Sprintf("%v", targetPort),
+				}
+				upsServers = append(upsServers, ups)
+				adus[ep] = true
+			}
+		}
+	}
+
+	glog.V(3).Infof("endpoints found: %v", upsServers)
+	return upsServers
 }
