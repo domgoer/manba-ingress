@@ -113,10 +113,9 @@ func (p *Parser) Build() (*ManbaSate, error) {
 		return nil, errors.Wrap(err, "overriding ManbaIngress values")
 	}
 
-	err = p.fillServers(state)
-	if err != nil {
-		return nil, errors.Wrap(err, "building servers")
-	}
+	state.Servers = p.fillServers(state)
+
+	state.Routings = p.fillRoutings(state)
 
 	return &state, nil
 }
@@ -290,14 +289,26 @@ func (p *Parser) fillServersFromPods(pods []corev1.Pod, svrs []Server) ([]Server
 }
 
 func (p *Parser) fillOverrides(state ManbaSate) error {
+	for i := 0; i < len(state.APIs); i++ {
+
+	}
 	return nil
 }
 
-func (p *Parser) fillServers(state ManbaSate) error {
+func (p *Parser) fillServers(state ManbaSate) []Server {
+	var res []Server
 	for _, cls := range state.Clusters {
-		state.Servers = append(state.Servers, cls.Servers...)
+		res = append(res, cls.Servers...)
 	}
-	return nil
+	return res
+}
+
+func (p *Parser) fillRoutings(state ManbaSate) []Routing {
+	var res []Routing
+	for _, api := range state.APIs {
+		res = append(res, api.Routings...)
+	}
+	return res
 }
 
 func (p *Parser) getServiceEndpoints(svc corev1.Service,
@@ -433,4 +444,8 @@ func getEndpoints(
 
 	glog.V(3).Infof("endpoints found: %v", upsServers)
 	return upsServers
+}
+
+func (p *Parser) getManbaIngressForService(service corev1.Service) (interface{}, error) {
+	return nil, nil
 }

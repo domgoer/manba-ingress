@@ -13,6 +13,7 @@ require (
 	github.com/fagongzi/manba v2.5.1+incompatible
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/imdario/mergo v0.3.8 // indirect
+	github.com/kong/kubernetes-ingress-controller v0.0.5 // indirect
 	github.com/labstack/echo v3.3.10+incompatible // indirect
 	github.com/labstack/gommon v0.3.0 // indirect
 	github.com/pkg/errors v0.9.1
@@ -26,4 +27,5 @@ require (
 	k8s.io/client-go v11.0.0+incompatible
 	k8s.io/klog v1.0.0
 	k8s.io/utils v0.0.0-20200124190032-861946025e34 // indirect
+	sigs.k8s.io/controller-runtime v0.5.0
 )
