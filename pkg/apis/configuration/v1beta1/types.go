@@ -17,9 +17,9 @@ type ManbaIngress struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	API     *metapb.API     `json:"api,omitempty"`
-	Routing *metapb.Routing `json:"routing,omitempty"`
-	Server  *metapb.Server  `json:"server,omitempty"`
+	API     *metapb.API          `json:"api,omitempty"`
+	Routing *metapb.Routing      `json:"routing,omitempty"`
+	Proxy   *metapb.DispatchNode `json:"proxy,omitempty"`
 }
 
 // ManbaIngressList is a top-level list type. The client methods for
@@ -60,8 +60,8 @@ func (in *ManbaIngress) DeepCopyInto(out *ManbaIngress) {
 			glog.Errorf("unexpected error copying configuration: %v", err)
 		}
 	}
-	if in.Server != nil {
-		in, out := in.Server, out.Server
+	if in.Proxy != nil {
+		in, out := in.Proxy, out.Proxy
 		b, err := in.Marshal()
 		if err != nil {
 			glog.Errorf("unexpected error copying configuration: %v", err)

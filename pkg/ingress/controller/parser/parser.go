@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 
+	configurationv1beta1 "github.com/domgoer/manba-ingress/pkg/apis/configuration/v1beta1"
+
 	"github.com/domgoer/manba-ingress/pkg/ingress/annotations"
 	"github.com/domgoer/manba-ingress/pkg/ingress/store"
 	"github.com/domgoer/manba-ingress/pkg/utils"
@@ -24,20 +26,17 @@ type Routing struct {
 	metapb.Routing
 }
 
-// Service represents a container of apis with the same host
+// Service contains k8s service and manba cluster
 type Service struct {
-	APIs []API
-
-	Namespace string
-	Backend   networkingv1beta1.IngressBackend
-}
-
-// Cluster contains k8s service and manba cluster
-type Cluster struct {
 	metapb.Cluster
 	Servers []Server
 
+	Dispatches []metapb.DispatchNode
+	APIs       []API
+
+	Namespace  string
 	K8SService corev1.Service
+	Backend    networkingv1beta1.IngressBackend
 }
 
 // Server contains k8s endpoint and manba server
@@ -52,7 +51,6 @@ type API struct {
 	metapb.API
 
 	Routings []Routing
-	Nodes    []Cluster
 	Ingress  networkingv1beta1.Ingress
 }
 
@@ -70,7 +68,7 @@ type Parser struct {
 // ManbaSate holds the configuration that should be applied to Manba.
 type ManbaSate struct {
 	APIs     []API
-	Clusters []Cluster
+	Services []Service
 	Servers  []Server
 	Routings []Routing
 	Plugins  []Plugin
@@ -97,14 +95,26 @@ func (p *Parser) Build() (*ManbaSate, error) {
 		return nil, errors.Wrap(err, "error parsing ingress rules")
 	}
 
-	// add the apis to the state
-	for _, service := range parsedInfo.ServiceNameToServices {
-		state.APIs = append(state.APIs, service.APIs...)
+	// populate Kubernetes Service
+	for key, service := range parsedInfo.ServiceNameToServices {
+		k8sSvc, err := p.store.GetService(service.Namespace, service.Backend.ServiceName)
+		if err != nil {
+			glog.Errorf("getting service: %v", err)
+		}
+		if k8sSvc != nil {
+			service.K8SService = *k8sSvc
+		}
+
+		parsedInfo.ServiceNameToServices[key] = service
 	}
 
-	state.Clusters, err = p.getClusters(parsedInfo.ServiceNameToServices)
+	for _, service := range parsedInfo.ServiceNameToServices {
+		state.Services = append(state.Services, service)
+	}
+
+	state.Servers, err = p.getServers(parsedInfo.ServiceNameToServices)
 	if err != nil {
-		return nil, errors.Wrap(err, "building clusters")
+		return nil, errors.Wrap(err, "building servers")
 	}
 
 	// merge ManbaIngress with APIS and Routings
@@ -177,6 +187,9 @@ func (p *Parser) parseIngressRules(
 				service, ok := serviceNameToServices[serviceName]
 				if !ok {
 					service = Service{
+						Cluster: metapb.Cluster{
+							Name: fmt.Sprintf("%s.%s.%s.svc", rule.Backend.ServiceName, ingress.Namespace, rule.Backend.ServicePort.String()),
+						},
 						Namespace: ingress.Namespace,
 						Backend:   rule.Backend,
 					}
@@ -202,6 +215,9 @@ func (p *Parser) parseIngressRules(
 		service, ok := serviceNameToServices[serviceName]
 		if !ok {
 			service = Service{
+				Cluster: metapb.Cluster{
+					Name: serviceName,
+				},
 				Namespace: ingress.Namespace,
 				Backend:   *defaultBackend,
 			}
@@ -226,47 +242,24 @@ func (p *Parser) parseIngressRules(
 	}, nil
 }
 
-func (p *Parser) getClusters(serviceMap map[string]Service) ([]Cluster, error) {
-	var clusters []Cluster
+func (p *Parser) getServers(serviceMap map[string]Service) ([]Server, error) {
+	var servers []Server
+	var err error
 	for _, service := range serviceMap {
-		clusterName := fmt.Sprintf("%s.%s.%s.svc", service.Backend.ServiceName, service.Namespace, service.Backend.ServicePort.String())
-		cluster := Cluster{
-			Cluster: metapb.Cluster{
-				Name: clusterName,
-			},
+		server := Server{
+			Server: metapb.Server{},
 		}
-
-		k8sSvc, err := p.store.GetService(service.Namespace, service.Backend.ServiceName)
-		if err != nil {
-			return nil, errors.Wrap(err, "get k8s service")
-		}
-
-		cluster.K8SService = *k8sSvc
-
-		cluster.Cluster.LoadBalance = annotations.ExtractLoadBalancer(k8sSvc.GetAnnotations())
-
 		svcKey := service.Namespace + "/" + service.Backend.ServiceName
-		servers, err := p.getServiceEndpoints(*k8sSvc, service.Backend.ServicePort.String())
+
+		service.Servers, err = p.getServiceEndpoints(service.K8SService, service.Backend.ServicePort.String())
 		if err != nil {
 			glog.Errorf("error getting endpoints for '%v' service: %v",
 				svcKey, err)
 		}
 
-		// get pods
-		pods, err := p.store.GetPodsForService(service.Namespace, service.Backend.ServiceName)
-		if err != nil {
-			glog.Errorf("error getting pods for '%v' service: %v",
-				svcKey, err)
-		}
-
-		cluster.Servers, err = p.fillServersFromPods(pods, servers)
-		if err != nil {
-			glog.Errorf("error filling servers from pods: %v : %v",
-				svcKey, err)
-		}
-
+		servers = append(servers, service.Servers...)
 	}
-	return clusters, nil
+	return servers, nil
 }
 
 func (p *Parser) fillServersFromPods(pods []corev1.Pod, svrs []Server) ([]Server, error) {
@@ -289,15 +282,51 @@ func (p *Parser) fillServersFromPods(pods []corev1.Pod, svrs []Server) ([]Server
 }
 
 func (p *Parser) fillOverrides(state ManbaSate) error {
-	for i := 0; i < len(state.APIs); i++ {
+	for i := 0; i < len(state.Services); i++ {
+		// Services
+		anns := state.Services[i].K8SService.Annotations
+		manbaIngress, err := p.getManbaIngressForService(state.Services[i].K8SService)
+		if err != nil {
+			glog.Errorf("error getting manbaIngress %v", err)
+		}
+
+		overrideService(&state.Services[i], manbaIngress, anns)
+
+		// Routes
+		for j := 0; j < len(state.Services[i].APIs); j++ {
+			manbaIngress, err := p.getManbaIngressFromIngress(&state.Services[i].APIs[j].Ingress)
+			if err != nil {
+				glog.Errorf("error getting manbaIngress %v", err)
+			}
+			overrideAPI(&state.Services[i].APIs[j], manbaIngress)
+		}
+		// Servers
+		for i := 0; i < len(state.Servers); i++ {
+			manbaIngress, err := p.getManbaIngressForService(
+				state.Servers[i].Service.K8sService)
+			if err == nil {
+				overrideUpstream(&state.Upstreams[i], kongIngress)
+			} else {
+				glog.Error(errors.Wrapf(err, "fetching KongIngress for service '%v' in namespace '%v'",
+					state.Upstreams[i].Service.Backend.ServiceName, state.Upstreams[i].Service.Namespace))
+			}
+		}
 
 	}
 	return nil
 }
 
+func (p *Parser) fillClusterByManbaIngress(service *Service, manbaIngress *configurationv1beta1.ManbaIngress) {
+	if manbaIngress == nil || manbaIngress.Proxy == nil {
+		return
+	}
+
+	// s := manbaIngress.Proxy
+}
+
 func (p *Parser) fillServers(state ManbaSate) []Server {
 	var res []Server
-	for _, cls := range state.Clusters {
+	for _, cls := range state.Services {
 		res = append(res, cls.Servers...)
 	}
 	return res
@@ -340,7 +369,7 @@ func (p *Parser) getServiceEndpoints(svc corev1.Service,
 		}
 
 		servicePort = corev1.ServicePort{
-			Protocol:   "TCP",
+			Protocol:   corev1.ProtocolTCP,
 			Port:       int32(externalPort),
 			TargetPort: intstr.FromString(backendPort),
 		}
@@ -446,6 +475,76 @@ func getEndpoints(
 	return upsServers
 }
 
-func (p *Parser) getManbaIngressForService(service corev1.Service) (interface{}, error) {
+func (p *Parser) getManbaIngressForService(service corev1.Service) (*configurationv1beta1.ManbaIngress, error) {
+	return nil, nil
+}
+
+func overrideService(service *Service, manbaIngress *configurationv1beta1.ManbaIngress, anns map[string]string) {
+	if service == nil {
+		return
+	}
+
+	overrideServiceByManbaIngress(service, manbaIngress)
+	overrideServiceByAnnotation(service, anns)
+
+}
+
+// overrideServiceByAnnotation sets the Service protocol via annotation
+func overrideServiceByAnnotation(service *Service, anns map[string]string) {
+	service.Cluster.LoadBalance = annotations.ExtractLoadBalancer(anns)
+}
+
+// overrideServiceByManbaIngress sets Service fields by ManbaIngress
+func overrideServiceByManbaIngress(service *Service, manbaIngress *configurationv1beta1.ManbaIngress) {
+	if manbaIngress == nil || manbaIngress.Proxy == nil {
+		return
+	}
+
+	// s := manbaIngress.Proxy
+
+	// TODO: add dispatch node
+}
+
+// overrideAPI  sets Route fields by ManbaIngress first, then by annotation
+func overrideAPI(api *API, manbaIngress *configurationv1beta1.ManbaIngress) {
+	if api == nil {
+		return
+	}
+
+	overrideAPIByManbaIngress(api, manbaIngress)
+	overrideAPIByAnnotation(api, api.Ingress.GetAnnotations())
+
+}
+
+// overrideAPIByManbaIngress sets API fields by KongIngress
+func overrideAPIByManbaIngress(api *API, manbaIngress *configurationv1beta1.ManbaIngress) {
+	if manbaIngress == nil || manbaIngress.API == nil {
+		return
+	}
+
+	a := manbaIngress.API
+
+	api.Status = a.Status
+
+	// TODO: copy
+	api.IPAccessControl = a.IPAccessControl
+	api.DefaultValue = a.DefaultValue
+	api.Perms = a.Perms
+	api.AuthFilter = a.AuthFilter
+	api.RenderTemplate = a.RenderTemplate
+	api.UseDefault = a.UseDefault
+	api.MatchRule = a.MatchRule
+	api.Position = a.Position
+	api.Tags = a.Tags
+	api.WebSocketOptions = a.WebSocketOptions
+
+}
+
+// overrideAPIByAnnotation sets API protocols via annotation
+func overrideAPIByAnnotation(api *API, anns map[string]string) {
+
+}
+
+func (p *Parser) getManbaIngressFromIngress(ingress *networkingv1beta1.Ingress) (*configurationv1beta1.ManbaIngress, error) {
 	return nil, nil
 }
