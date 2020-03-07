@@ -1,6 +1,7 @@
 package store
 
 import (
+	configurationv1beta1 "github.com/domgoer/manba-ingress/pkg/apis/configuration/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -13,6 +14,7 @@ type Store interface {
 	ListIngresses() []*networkingv1beta1.Ingress
 	GetService(namespace, name string) (*corev1.Service, error)
 	GetPodsForService(namespace, name string) ([]corev1.Pod, error)
+	GetManbaIngress(namespace, name string) (*configurationv1beta1.ManbaIngress, error)
 }
 
 type store struct {

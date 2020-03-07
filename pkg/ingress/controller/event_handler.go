@@ -1,6 +1,10 @@
 package controller
 
 import (
+	"reflect"
+
+	corev1 "k8s.io/api/core/v1"
+
 	"github.com/eapache/channels"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -86,5 +90,43 @@ func (r ResourceEventHandler) OnDelete(obj interface{}) {
 	r.UpdateCh.In() <- Event{
 		Type: DeleteEvent,
 		Obj:  obj,
+	}
+}
+
+// EndpointsEventHandler handles create, update and delete events for
+// endpoint resources in k8s.
+// It is not ingress.class aware and the OnUpdate method filters out
+// events with same set of endpoints.
+type EndpointsEventHandler struct {
+	UpdateCh *channels.RingChannel
+}
+
+// OnAdd is invoked whenever a resource is added.
+func (reh EndpointsEventHandler) OnAdd(obj interface{}) {
+	reh.UpdateCh.In() <- Event{
+		Type: CreateEvent,
+		Obj:  obj,
+	}
+}
+
+// OnDelete is invoked whenever a resource is deleted.
+func (reh EndpointsEventHandler) OnDelete(obj interface{}) {
+	reh.UpdateCh.In() <- Event{
+		Type: DeleteEvent,
+		Obj:  obj,
+	}
+}
+
+// OnUpdate is invoked whenever an Endpoint is changed.
+// If the endpoints are same as before, an update is not sent on
+// the UpdateCh.
+func (reh EndpointsEventHandler) OnUpdate(old, cur interface{}) {
+	oep := old.(*corev1.Endpoints)
+	ocur := cur.(*corev1.Endpoints)
+	if !reflect.DeepEqual(ocur.Subsets, oep.Subsets) {
+		reh.UpdateCh.In() <- Event{
+			Type: UpdateEvent,
+			Obj:  cur,
+		}
 	}
 }

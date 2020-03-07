@@ -16,6 +16,8 @@ const (
 
 	circuitBreakerAnnotationKey = "configuration.manba.io/circuitBreaker"
 
+	configurationAnnotationKey = "configuration.manba.io"
+
 	// DefaultIngressClass defines the default class used
 	// by Kong's ingress controller.
 	DefaultIngressClass = "manba"
@@ -57,8 +59,8 @@ func ExtractMaxQPS(anns map[string]string) int64 {
 	return int64(i)
 }
 
-// ExtrackCircuitBreaker extracts the circuitBreaker of server
-func ExtrackCircuitBreaker(anns map[string]string) *metapb.CircuitBreaker {
+// ExtractCircuitBreaker extracts the circuitBreaker of server
+func ExtractCircuitBreaker(anns map[string]string) *metapb.CircuitBreaker {
 	data := anns[circuitBreakerAnnotationKey]
 	if data == "" {
 		return nil
@@ -72,6 +74,8 @@ func ExtrackCircuitBreaker(anns map[string]string) *metapb.CircuitBreaker {
 	return res
 }
 
-func HasManbaServiceAnnotation(anns map[string]string) bool {
-	return true
+// ExtractConfigurationName extracts the name of the ManbaIngress object that holds
+// information about the configuration to use in APIs, Routings and Services
+func ExtractConfigurationName(anns map[string]string) string {
+	return anns[configurationAnnotationKey]
 }

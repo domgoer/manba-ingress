@@ -12,7 +12,9 @@ require (
 	github.com/fagongzi/log v0.0.0-20191122063922-293b75312445 // indirect
 	github.com/fagongzi/manba v2.5.1+incompatible
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
-	github.com/imdario/mergo v0.3.8 // indirect
+	github.com/hashicorp/go-memdb v1.1.0
+	github.com/hbagdi/deck v1.0.2
+	github.com/hbagdi/go-kong v0.11.0
 	github.com/kong/kubernetes-ingress-controller v0.0.5 // indirect
 	github.com/labstack/echo v3.3.10+incompatible // indirect
 	github.com/labstack/gommon v0.3.0 // indirect

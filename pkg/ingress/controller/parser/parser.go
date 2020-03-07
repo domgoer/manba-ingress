@@ -246,9 +246,6 @@ func (p *Parser) getServers(serviceMap map[string]Service) ([]Server, error) {
 	var servers []Server
 	var err error
 	for _, service := range serviceMap {
-		server := Server{
-			Server: metapb.Server{},
-		}
 		svcKey := service.Namespace + "/" + service.Backend.ServiceName
 
 		service.Servers, err = p.getServiceEndpoints(service.K8SService, service.Backend.ServicePort.String())
@@ -274,7 +271,7 @@ func (p *Parser) fillServersFromPods(pods []corev1.Pod, svrs []Server) ([]Server
 		if p, ok := podMap[eip]; ok {
 			anns := p.GetAnnotations()
 			svr.MaxQPS = annotations.ExtractMaxQPS(anns)
-			svr.CircuitBreaker = annotations.ExtrackCircuitBreaker(anns)
+			svr.CircuitBreaker = annotations.ExtractCircuitBreaker(anns)
 		}
 		servers = append(servers, svr)
 	}
@@ -301,14 +298,13 @@ func (p *Parser) fillOverrides(state ManbaSate) error {
 			overrideAPI(&state.Services[i].APIs[j], manbaIngress)
 		}
 		// Servers
-		for i := 0; i < len(state.Servers); i++ {
-			manbaIngress, err := p.getManbaIngressForService(
-				state.Servers[i].Service.K8sService)
+		for j := 0; i < len(state.Servers); j++ {
+			pods, err := p.getPodsFromService(state.Services[i])
 			if err == nil {
-				overrideUpstream(&state.Upstreams[i], kongIngress)
+				overrideServer(&state.Servers[i], pods)
 			} else {
-				glog.Error(errors.Wrapf(err, "fetching KongIngress for service '%v' in namespace '%v'",
-					state.Upstreams[i].Service.Backend.ServiceName, state.Upstreams[i].Service.Namespace))
+				glog.Error(errors.Wrapf(err, "fetching Pods from services '%v' in namespace '%v'",
+					state.Services[i].K8SService.Name, state.Services[i].Namespace))
 			}
 		}
 
@@ -476,7 +472,11 @@ func getEndpoints(
 }
 
 func (p *Parser) getManbaIngressForService(service corev1.Service) (*configurationv1beta1.ManbaIngress, error) {
-	return nil, nil
+	configName := annotations.ExtractConfigurationName(service.GetAnnotations())
+	if configName == "" {
+		return nil, nil
+	}
+	return p.store.GetManbaIngress(service.Namespace, configName)
 }
 
 func overrideService(service *Service, manbaIngress *configurationv1beta1.ManbaIngress, anns map[string]string) {
@@ -487,6 +487,19 @@ func overrideService(service *Service, manbaIngress *configurationv1beta1.ManbaI
 	overrideServiceByManbaIngress(service, manbaIngress)
 	overrideServiceByAnnotation(service, anns)
 
+}
+
+func overrideServer(server *Server, pods []corev1.Pod) {
+	for _, pod := range pods {
+		if strings.HasPrefix(server.Addr, pod.Status.PodIP+":") {
+			anns := pod.GetAnnotations()
+			server.MaxQPS = annotations.ExtractMaxQPS(anns)
+			server.CircuitBreaker = annotations.ExtractCircuitBreaker(anns)
+			return
+		}
+	}
+
+	glog.Warningf("failed find pod by server addr '%s'", server.Addr)
 }
 
 // overrideServiceByAnnotation sets the Service protocol via annotation
@@ -546,5 +559,17 @@ func overrideAPIByAnnotation(api *API, anns map[string]string) {
 }
 
 func (p *Parser) getManbaIngressFromIngress(ingress *networkingv1beta1.Ingress) (*configurationv1beta1.ManbaIngress, error) {
-	return nil, nil
+	configName := annotations.ExtractConfigurationName(ingress.GetAnnotations())
+	if configName != "" {
+		mi, err := p.store.GetManbaIngress(ingress.Namespace, configName)
+		if err == nil {
+			return mi, nil
+		}
+	}
+
+	return p.store.GetManbaIngress(ingress.Namespace, ingress.Name)
+}
+
+func (p *Parser) getPodsFromService(service Service) ([]corev1.Pod, error) {
+	return p.store.GetPodsForService(service.Namespace, service.K8SService.Name)
 }
