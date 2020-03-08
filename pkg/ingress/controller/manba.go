@@ -20,8 +20,6 @@ func (m *ManbaController) OnUpdate() error {
 	return nil
 }
 
-func (m *ManbaController) toDeckContent(state *parser.State)
-
 func (m *ManbaController) onUpdate() {
 	// client := m.cfg.Client
 }

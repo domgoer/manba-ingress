@@ -8,6 +8,8 @@ import (
 	"syscall"
 	"time"
 
+	_ "github.com/domgoer/manba-ingress/pkg/manba/state"
+
 	"github.com/domgoer/manba-ingress/pkg/ingress/annotations"
 	"github.com/domgoer/manba-ingress/pkg/ingress/store"
 

@@ -1,6 +1,10 @@
 package crud
 
+import "github.com/hbagdi/deck/crud"
+
 type t string
+
+type Kind string
 
 // Op represents
 type Op struct {
@@ -20,12 +24,30 @@ var (
 	Delete = Op{"Delete"}
 )
 
+// Event represents an event to perform
+// an imperative operation
+// that gets Manba closer to the target state.
+type Event struct {
+	Op     Op
+	Kind   Kind
+	Obj    interface{}
+	OldObj interface{}
+}
+
+func eventFromArg(arg crud.Arg) Event {
+	event, ok := arg.(Event)
+	if !ok {
+		panic("unexpected type, expected diff.Event")
+	}
+	return event
+}
+
 // Arg is an argument to a callback function.
 type Arg interface{}
 
 // Actions is an interface for CRUD operations on any entity
 type Actions interface {
-	Create(...Arg) (Arg, error)
-	Delete(...Arg) (Arg, error)
-	Update(...Arg) (Arg, error)
+	Create(Arg) (Arg, error)
+	Delete(Arg) (Arg, error)
+	Update(Arg) (Arg, error)
 }

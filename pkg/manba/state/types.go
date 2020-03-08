@@ -51,3 +51,84 @@ func (c *Cluster) Identifier() string {
 func (c *Cluster) Equal(c2 *Cluster) bool {
 	return reflect.DeepEqual(c, c2)
 }
+
+// Routing represents a routing in Manba.
+// It adds some helper methods along with Metadata to the original Routing object.
+type Routing struct {
+	metapb.Routing
+	Metadata
+}
+
+// Identifier returns routing name or id
+func (c *Routing) Identifier() string {
+	if c.Name != "" {
+		return c.Name
+	}
+	return fmt.Sprintf("%d", c.ID)
+}
+
+// Equal returns true if c and c2 are equal.
+func (c *Routing) Equal(c2 *Routing) bool {
+	return reflect.DeepEqual(c, c2)
+}
+
+// Server represents a server in Manba.
+// It adds some helper methods along with Metadata to the original Server object.
+type Server struct {
+	metapb.Server
+	Metadata
+}
+
+// Identifier returns server addr or id
+func (c *Server) Identifier() string {
+	if c.Addr != "" {
+		return c.Addr
+	}
+	return fmt.Sprintf("%d", c.ID)
+}
+
+// Equal returns true if c and c2 are equal.
+func (c *Server) Equal(c2 *Server) bool {
+	return reflect.DeepEqual(c, c2)
+}
+
+// API represents a api in Manba.
+// It adds some helper methods along with Metadata to the original API object.
+type API struct {
+	metapb.API
+	Metadata
+}
+
+// Identifier returns api name or id
+func (c *API) Identifier() string {
+	if c.Name != "" {
+		return c.Name
+	}
+	return fmt.Sprintf("%d", c.ID)
+}
+
+// Equal returns true if c and c2 are equal.
+func (c *API) Equal(c2 *API) bool {
+	return reflect.DeepEqual(c, c2)
+}
+
+// Bind represents a bind in Manba.
+// It adds some helper methods along with Metadata to the original API object.
+type Bind struct {
+	Name string
+	metapb.Bind
+	Metadata
+}
+
+// Identifier returns cluster_id-server_id
+func (c *Bind) Identifier() string {
+	if c.Name != "" {
+		return c.Name
+	}
+	return fmt.Sprintf("%d-%d", c.ClusterID, c.ServerID)
+}
+
+// Equal returns true if c and c2 are equal.
+func (c *Bind) Equal(c2 *Bind) bool {
+	return reflect.DeepEqual(c, c2)
+}

@@ -32,7 +32,7 @@ var clusterTableSchema = &memdb.TableSchema{
 
 // Add adds a cluster to the collection
 // An error is thrown if cluster.ID is empty.
-func (c *ClusterCollection) Add(cluster *metapb.Cluster) error {
+func (c *ClusterCollection) Add(cluster Cluster) error {
 	id := id2Str(cluster.ID)
 	if id == "" {
 		return errIDRequired
@@ -167,7 +167,7 @@ func (c *ClusterCollection) GetAll() ([]*Cluster, error) {
 }
 
 func deepCopyManbaCluster(s Cluster) *metapb.Cluster {
-	d , _ := s.Marshal()
+	d, _ := s.Marshal()
 	res := new(metapb.Cluster)
 	res.Unmarshal(d)
 	return res

@@ -37,6 +37,10 @@ func (s *store) GetPodsForService(namespace, name string) ([]corev1.Pod, error) 
 	panic("implement me")
 }
 
+func (s *store) GetManbaIngress(namespace, name string) (*configurationv1beta1.ManbaIngress, error) {
+	panic("implement me")
+}
+
 // New creates a new object store to be used in the ingress controller
 func New(isValidIngresClassFunc func(objectMeta *metav1.ObjectMeta) bool) Store {
 	return &store{

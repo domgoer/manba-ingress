@@ -1,7 +1,11 @@
 package solver
 
 import (
+	"github.com/domgoer/manba-ingress/pkg/manba/crud"
+	"github.com/domgoer/manba-ingress/pkg/manba/diff"
 	manba "github.com/fagongzi/gateway/pkg/client"
+	"github.com/golang/glog"
+	"github.com/hbagdi/deck/state"
 )
 
 // Stats holds the stats related to a Solve.
@@ -12,7 +16,53 @@ type Stats struct {
 }
 
 // Solve generates a diff and walks the graph.
-func Solve(doneCh chan struct{}, syncer interface{},
-	client *manba.Client, parallelism int, dry bool) (Stats, []error) {
+func Solve(doneCh chan struct{}, syncer *diff.Syncer,
+	client manba.Client, parallelism int, dry bool) (Stats, []error) {
+	r := crud.NewRawRegistry(client)
+
+	var stats Stats
+	recordOp := func(op crud.Op) {
+		switch op {
+		case crud.Create:
+			stats.CreateOps = stats.CreateOps + 1
+		case crud.Update:
+			stats.UpdateOps = stats.UpdateOps + 1
+		case crud.Delete:
+			stats.DeleteOps = stats.DeleteOps + 1
+		}
+	}
+
+	errs := syncer.Run(doneCh, parallelism, func(e crud.Event) (crud.Arg, error) {
+		var err error
+		var result crud.Arg
+
+		c := e.Obj.(state.ConsoleString)
+		switch e.Op {
+		case crud.Create:
+			glog.Infof("creating <%s>, data: %+v", e.Kind, e.Obj)
+		case crud.Update:
+			diffString, err := diff(e.OldObj, e.Obj)
+			if err != nil {
+				return nil, err
+			}
+			glog.Infof("updating <%s>, diff: <%s>, data: %+v", e.Kind, diffString, e.Obj)
+		case crud.Delete:
+			glog.Infof("deleting <%s>, data: %+v", e.Kind, e.Obj)
+		default:
+			panic("unknown operation " + e.Op.String())
+		}
+
+		// sync mode
+		// fire the request to Manba
+		result, err = r.Do(e.Kind, e.Op, e)
+		if err != nil {
+			return nil, err
+		}
+		// record operation in both: diff and sync commands
+		recordOp(e.Op)
+
+		return result, nil
+	})
+	return stats, errs
 
 }

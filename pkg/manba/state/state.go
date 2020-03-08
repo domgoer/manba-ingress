@@ -19,6 +19,7 @@ type ManbaState struct {
 	Servers  *ServerCollection
 	Clusters *ClusterCollection
 	Routings *RoutingCollection
+	Binds    *BindCollection
 }
 
 // NewManbaState creates a new in-memory ManbaState.

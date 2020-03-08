@@ -22,6 +22,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.6.2
 	github.com/valyala/fasttemplate v1.1.0 // indirect
+	github.com/yudai/gojsondiff v1.0.0
 	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
 	gopkg.in/go-playground/pool.v3 v3.1.1
 	k8s.io/api v0.17.3
