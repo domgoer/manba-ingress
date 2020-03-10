@@ -1,8 +1,6 @@
 package crud
 
 import (
-	"strconv"
-
 	"github.com/domgoer/manba-ingress/pkg/manba/state"
 	manba "github.com/fagongzi/gateway/pkg/client"
 )
@@ -17,7 +15,7 @@ func (c *clusterPostAction) Create(arg Arg) (Arg, error) {
 }
 
 func (c *clusterPostAction) Delete(arg Arg) (Arg, error) {
-	return nil, c.currentState.Clusters.Delete(strconv.Itoa(int(clusterFromStruct(arg).ID)))
+	return nil, c.currentState.Clusters.Delete(arg.(*state.Cluster).Identifier())
 }
 
 func (c *clusterPostAction) Update(arg Arg) (Arg, error) {
@@ -41,7 +39,7 @@ func (c *clusterRawAction) Create(arg Arg) (Arg, error) {
 	event := eventFromArg(arg)
 	cluster := clusterFromObj(event.Obj)
 	cb := c.client.NewClusterBuilder()
-	id, err := cb.Use(cluster).Commit()
+	id, err := cb.Use(cluster.Cluster).Commit()
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +59,7 @@ func (c *clusterRawAction) Update(arg Arg) (Arg, error) {
 	event := eventFromArg(arg)
 	cluster := clusterFromObj(event.Obj)
 	cb := c.client.NewClusterBuilder()
-	_, err := cb.Use(cluster).Commit()
+	_, err := cb.Use(cluster.Cluster).Commit()
 	return cluster, err
 }
 

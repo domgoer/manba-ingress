@@ -4,6 +4,7 @@ import "github.com/hbagdi/deck/crud"
 
 type t string
 
+// Kind represents Kind of an entity or object.
 type Kind string
 
 // Op represents

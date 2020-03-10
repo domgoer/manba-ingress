@@ -65,8 +65,8 @@ type Parser struct {
 	store store.Store
 }
 
-// ManbaSate holds the configuration that should be applied to Manba.
-type ManbaSate struct {
+// ManbaState holds the configuration that should be applied to Manba.
+type ManbaState struct {
 	APIs     []API
 	Services []Service
 	Servers  []Server
@@ -86,8 +86,8 @@ func New(s store.Store) *Parser {
 // Build creates a Manba configuration from Ingress and Custom resources
 // defined in Kuberentes.
 // It throws an error if there is an error returned from client-go.
-func (p *Parser) Build() (*ManbaSate, error) {
-	var state ManbaSate
+func (p *Parser) Build() (*ManbaState, error) {
+	var state ManbaState
 	ings := p.store.ListIngresses()
 	// parse ingress rules
 	parsedInfo, err := p.parseIngressRules(ings)
@@ -124,6 +124,9 @@ func (p *Parser) Build() (*ManbaSate, error) {
 	}
 
 	state.Servers = p.fillServers(state)
+
+	// fill api before routing
+	state.APIs = p.fillAPIs(state)
 
 	state.Routings = p.fillRoutings(state)
 
@@ -278,7 +281,7 @@ func (p *Parser) fillServersFromPods(pods []corev1.Pod, svrs []Server) ([]Server
 	return servers, nil
 }
 
-func (p *Parser) fillOverrides(state ManbaSate) error {
+func (p *Parser) fillOverrides(state ManbaState) error {
 	for i := 0; i < len(state.Services); i++ {
 		// Services
 		anns := state.Services[i].K8SService.Annotations
@@ -320,7 +323,7 @@ func (p *Parser) fillClusterByManbaIngress(service *Service, manbaIngress *confi
 	// s := manbaIngress.Proxy
 }
 
-func (p *Parser) fillServers(state ManbaSate) []Server {
+func (p *Parser) fillServers(state ManbaState) []Server {
 	var res []Server
 	for _, cls := range state.Services {
 		res = append(res, cls.Servers...)
@@ -328,7 +331,15 @@ func (p *Parser) fillServers(state ManbaSate) []Server {
 	return res
 }
 
-func (p *Parser) fillRoutings(state ManbaSate) []Routing {
+func (p *Parser) fillAPIs(state ManbaState) []API {
+	var res []API
+	for _, cls := range state.Services {
+		res = append(res, cls.APIs...)
+	}
+	return res
+}
+
+func (p *Parser) fillRoutings(state ManbaState) []Routing {
 	var res []Routing
 	for _, api := range state.APIs {
 		res = append(res, api.Routings...)
@@ -486,7 +497,6 @@ func overrideService(service *Service, manbaIngress *configurationv1beta1.ManbaI
 
 	overrideServiceByManbaIngress(service, manbaIngress)
 	overrideServiceByAnnotation(service, anns)
-
 }
 
 func overrideServer(server *Server, pods []corev1.Pod) {

@@ -32,7 +32,7 @@ var apiTableSchema = &memdb.TableSchema{
 
 // Add adds a api to the collection
 // An error is thrown if api.ID is empty.
-func (c *APICollection) Add(api *metapb.API) error {
+func (c *APICollection) Add(api API) error {
 	id := id2Str(api.ID)
 	if id == "" {
 		return errIDRequired

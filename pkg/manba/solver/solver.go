@@ -1,6 +1,9 @@
 package solver
 
 import (
+	"errors"
+	"strings"
+
 	"github.com/domgoer/manba-ingress/pkg/manba/crud"
 	"github.com/domgoer/manba-ingress/pkg/manba/diff"
 	manba "github.com/fagongzi/gateway/pkg/client"
@@ -17,7 +20,7 @@ type Stats struct {
 
 // Solve generates a diff and walks the graph.
 func Solve(doneCh chan struct{}, syncer *diff.Syncer,
-	client manba.Client, parallelism int, dry bool) (Stats, []error) {
+	client manba.Client, parallelism int) (Stats, error) {
 	r := crud.NewRawRegistry(client)
 
 	var stats Stats
@@ -63,6 +66,10 @@ func Solve(doneCh chan struct{}, syncer *diff.Syncer,
 
 		return result, nil
 	})
-	return stats, errs
+	var list []string
+	for _, e := range errs {
+		list = append(list, e.Error())
+	}
+	return stats, errors.New(strings.Join(list, "\n"))
 
 }

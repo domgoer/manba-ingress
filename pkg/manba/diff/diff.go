@@ -24,7 +24,7 @@ type Syncer struct {
 	targetState  *state.ManbaState
 	postProcess  crud.Registry
 
-	eventChan chan Event
+	eventChan chan crud.Event
 	errChan   chan error
 	stopChan  chan struct{}
 
@@ -59,7 +59,7 @@ func (sc *Syncer) Run(done <-chan struct{}, parallelism int, d Do) []error {
 
 	var wg sync.WaitGroup
 
-	sc.eventChan = make(chan Event, 10)
+	sc.eventChan = make(chan crud.Event, 10)
 	sc.stopChan = make(chan struct{})
 	sc.errChan = make(chan error)
 
@@ -117,3 +117,20 @@ func (sc *Syncer) Run(done <-chan struct{}, parallelism int, d Do) []error {
 
 	return errs
 }
+
+func (sc *Syncer) diff() error {
+	err := sc.createUpdate()
+	if err != nil {
+		return err
+	}
+
+	err = sc.delete()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (sc *Syncer) createUpdate() error {}
+
+func (sc *Syncer) delete() error {}

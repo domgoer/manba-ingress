@@ -1,8 +1,6 @@
 package crud
 
 import (
-	"strconv"
-
 	"github.com/domgoer/manba-ingress/pkg/manba/state"
 	manba "github.com/fagongzi/gateway/pkg/client"
 )
@@ -17,7 +15,7 @@ func (c *serverPostAction) Create(arg Arg) (Arg, error) {
 }
 
 func (c *serverPostAction) Delete(arg Arg) (Arg, error) {
-	return nil, c.currentState.Servers.Delete(strconv.Itoa(int(serverFromStruct(arg).ID)))
+	return nil, c.currentState.Servers.Delete(arg.(*state.Server).Identifier())
 }
 
 func (c *serverPostAction) Update(arg Arg) (Arg, error) {
@@ -41,7 +39,7 @@ func (c *serverRawAction) Create(arg Arg) (Arg, error) {
 	event := eventFromArg(arg)
 	server := serverFromObj(event.Obj)
 	cb := c.client.NewServerBuilder()
-	id, err := cb.Use(server).Commit()
+	id, err := cb.Use(server.Server).Commit()
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +59,7 @@ func (c *serverRawAction) Update(arg Arg) (Arg, error) {
 	event := eventFromArg(arg)
 	server := serverFromObj(event.Obj)
 	cb := c.client.NewServerBuilder()
-	_, err := cb.Use(server).Commit()
+	_, err := cb.Use(server.Server).Commit()
 	return server, err
 }
 

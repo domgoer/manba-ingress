@@ -13,13 +13,74 @@ limitations under the License.
 
 package controller
 
+import (
+	"crypto/sha256"
+	"encoding/json"
+	"reflect"
+	"sort"
+
+	"github.com/domgoer/manba-ingress/pkg/ingress/controller/parser"
+	"github.com/domgoer/manba-ingress/pkg/manba/diff"
+	"github.com/domgoer/manba-ingress/pkg/manba/dump"
+	"github.com/domgoer/manba-ingress/pkg/manba/solver"
+	"github.com/domgoer/manba-ingress/pkg/manba/state"
+	"github.com/golang/glog"
+	"github.com/pkg/errors"
+)
+
 // OnUpdate is called periodically by syncQueue to keep the configuration in sync.
 // returning nil implies the synchronization finished correctly.
 // Returning an error means requeue the update.
-func (m *ManbaController) OnUpdate() error {
+func (m *ManbaController) OnUpdate(state *parser.ManbaState) error {
+	target := m.toStable(state)
+
+	jsonConfig, err := json.Marshal(target)
+	if err != nil {
+		return errors.Wrap(err, "marshaling Man declarative configuration to JSON")
+	}
+	shaSum := sha256.Sum256(jsonConfig)
+	if reflect.DeepEqual(m.runningConfigHash, shaSum) {
+		glog.Info("no configuration change, skipping sync to Manba")
+		return nil
+	}
+	m.onUpdate()
 	return nil
 }
 
-func (m *ManbaController) onUpdate() {
-	// client := m.cfg.Client
+func (m *ManbaController) onUpdate(targetRaw *dump.ManbaRawState) error {
+	client := m.cfg.Client
+
+	targetState, err := state.Get(targetRaw)
+	if err != nil {
+		return errors.Wrap(err, "get target state")
+	}
+
+	raw, err := dump.Get(client)
+	if err != nil {
+		return errors.Wrap(err, "loading configuration from manba")
+	}
+
+	currentState, err := state.Get(raw)
+	if err != nil {
+		return errors.Wrap(err, "get current state")
+	}
+
+	syncer, err := diff.NewSyncer(currentState, targetState)
+	if err != nil {
+		return errors.Wrap(err, "new syncer")
+	}
+	syncer.SilenceWarnings = true
+	_, err = solver.Solve(nil, syncer, client, m.cfg.Concurrency)
+	return err
+}
+
+func (m *ManbaController) toStable(state *parser.ManbaState) *dump.ManbaRawStat {
+	var s dump.ManbaRawState
+	for _, api := range state.APIs {
+		s.APIs = append(s.APIs, api.API)
+	}
+	sort.SliceStable(s.APIs, func(i, j int) bool {
+		return s.APIs[i].Name < s.APIs[j].Name
+	})
+	return &s
 }

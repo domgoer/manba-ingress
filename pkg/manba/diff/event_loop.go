@@ -9,7 +9,7 @@ import (
 
 // Do is the worker function to sync the diff
 // TODO remove crud.Arg
-type Do func(a Event) (crud.Arg, error)
+type Do func(a crud.Arg) (crud.Arg, error)
 
 func (sc *Syncer) eventLoop(d Do, a int) error {
 	for event := range sc.eventChan {
@@ -37,6 +37,6 @@ func (sc *Syncer) handleEvent(d Do, event crud.Event, a int) error {
 	return nil
 }
 
-func (sc *Syncer) eventCompleted(e Event) {
+func (sc *Syncer) eventCompleted(e crud.Event) {
 	atomic.AddInt32(&sc.InFlightOps, -1)
 }

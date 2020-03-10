@@ -1,8 +1,6 @@
 package crud
 
 import (
-	"strconv"
-
 	"github.com/domgoer/manba-ingress/pkg/manba/state"
 	manba "github.com/fagongzi/gateway/pkg/client"
 )
@@ -17,7 +15,7 @@ func (c *routingPostAction) Create(arg Arg) (Arg, error) {
 }
 
 func (c *routingPostAction) Delete(arg Arg) (Arg, error) {
-	return nil, c.currentState.Routings.Delete(strconv.Itoa(int(routingFromStruct(arg).ID)))
+	return nil, c.currentState.Routings.Delete(arg.(*state.Routing).Identifier())
 }
 
 func (c *routingPostAction) Update(arg Arg) (Arg, error) {
@@ -41,7 +39,7 @@ func (c *routingRawAction) Create(arg Arg) (Arg, error) {
 	event := eventFromArg(arg)
 	routing := routingFromObj(event.Obj)
 	cb := c.client.NewRoutingBuilder()
-	id, err := cb.Use(routing).Commit()
+	id, err := cb.Use(routing.Routing).Commit()
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +59,7 @@ func (c *routingRawAction) Update(arg Arg) (Arg, error) {
 	event := eventFromArg(arg)
 	routing := routingFromObj(event.Obj)
 	cb := c.client.NewRoutingBuilder()
-	_, err := cb.Use(routing).Commit()
+	_, err := cb.Use(routing.Routing).Commit()
 	return routing, err
 }
 

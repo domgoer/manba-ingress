@@ -6,9 +6,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Kind represents Kind of an entity or object.
-type Kind string
-
 // Registry can hold Kinds and their respective CRUD operations.
 type Registry struct {
 	types map[Kind]Actions
@@ -17,14 +14,22 @@ type Registry struct {
 // NewPostProcess init mem db crud
 func NewPostProcess(current *state.ManbaState) Registry {
 	var r Registry
-	r.MustRegister("cluster", &clusterPostAction{state})
+	r.MustRegister("cluster", &clusterPostAction{current})
+	r.MustRegister("routing", &routingPostAction{current})
+	r.MustRegister("server", &serverPostAction{current})
+	r.MustRegister("api", &apiPostAction{current})
+	r.MustRegister("bind", &bindPostAction{current})
 	return r
 }
 
 // NewRawRegistry init manba crud
-func NewRawRegistry(client manba.CLient) Registry {
+func NewRawRegistry(client manba.Client) Registry {
 	var r Registry
 	r.MustRegister("cluster", &clusterRawAction{client})
+	r.MustRegister("routing", &routingRawAction{client})
+	r.MustRegister("server", &serverRawAction{client})
+	r.MustRegister("api", &apiRawAction{client})
+	r.MustRegister("bind", &bindRawAction{client})
 	return r
 }
 

@@ -43,8 +43,11 @@ type Config struct {
 	UpdateStatus         bool
 	PublishService       string
 	PublishStatusAddress string
+
+	Concurrency int
 }
 
+// ManbaController listen ingress and update raw data in manba
 type ManbaController struct {
 	cfg     Config
 	elector election.Elector
@@ -58,6 +61,8 @@ type ManbaController struct {
 
 	stopLock       sync.Mutex
 	isShuttingDown bool
+
+	runningConfigHash [32]byte
 
 	syncStatus status.Syncer
 }

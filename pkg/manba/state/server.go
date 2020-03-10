@@ -20,10 +20,10 @@ var serverTableSchema = &memdb.TableSchema{
 			Unique:  true,
 			Indexer: &memdb.StringFieldIndex{Field: "ID"},
 		},
-		"name": {
-			Name:         "name",
+		"addr": {
+			Name:         "addr",
 			Unique:       true,
-			Indexer:      &memdb.StringFieldIndex{Field: "Name"},
+			Indexer:      &memdb.StringFieldIndex{Field: "Addr"},
 			AllowMissing: true,
 		},
 		all: allIndex,

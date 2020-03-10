@@ -1,8 +1,6 @@
 package crud
 
 import (
-	"strconv"
-
 	"github.com/domgoer/manba-ingress/pkg/manba/state"
 	manba "github.com/fagongzi/gateway/pkg/client"
 )
@@ -17,7 +15,7 @@ func (c *apiPostAction) Create(arg Arg) (Arg, error) {
 }
 
 func (c *apiPostAction) Delete(arg Arg) (Arg, error) {
-	return nil, c.currentState.APIs.Delete(strconv.Itoa(int(apiFromStruct(arg).ID)))
+	return nil, c.currentState.APIs.Delete(arg.(*state.API).Identifier())
 }
 
 func (c *apiPostAction) Update(arg Arg) (Arg, error) {
@@ -41,7 +39,7 @@ func (c *apiRawAction) Create(arg Arg) (Arg, error) {
 	event := eventFromArg(arg)
 	api := apiFromObj(event.Obj)
 	cb := c.client.NewAPIBuilder()
-	id, err := cb.Use(api).Commit()
+	id, err := cb.Use(api.API).Commit()
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +59,7 @@ func (c *apiRawAction) Update(arg Arg) (Arg, error) {
 	event := eventFromArg(arg)
 	api := apiFromObj(event.Obj)
 	cb := c.client.NewAPIBuilder()
-	_, err := cb.Use(api).Commit()
+	_, err := cb.Use(api.API).Commit()
 	return api, err
 }
 

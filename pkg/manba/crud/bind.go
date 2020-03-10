@@ -1,8 +1,6 @@
 package crud
 
 import (
-	"strconv"
-
 	"github.com/domgoer/manba-ingress/pkg/manba/state"
 	manba "github.com/fagongzi/gateway/pkg/client"
 )
@@ -17,7 +15,7 @@ func (c *bindPostAction) Create(arg Arg) (Arg, error) {
 }
 
 func (c *bindPostAction) Delete(arg Arg) (Arg, error) {
-	return nil, c.currentState.Binds.Delete(strconv.Itoa(int(bindFromStruct(arg).ID)))
+	return nil, c.currentState.Binds.Delete(arg.(*state.Bind).Identifier())
 }
 
 func (c *bindPostAction) Update(arg Arg) (Arg, error) {
@@ -40,12 +38,10 @@ func bindFromObj(obj interface{}) *state.Bind {
 func (c *bindRawAction) Create(arg Arg) (Arg, error) {
 	event := eventFromArg(arg)
 	bind := bindFromObj(event.Obj)
-	cb := c.client.NewBindBuilder()
-	id, err := cb.Use(bind).Commit()
+	err := c.client.AddBind(bind.GetClusterID(), bind.GetServerID())
 	if err != nil {
 		return nil, err
 	}
-	bind.ID = id
 	return &state.Bind{Bind: bind.Bind}, nil
 
 }
@@ -53,16 +49,13 @@ func (c *bindRawAction) Create(arg Arg) (Arg, error) {
 func (c *bindRawAction) Delete(arg Arg) (Arg, error) {
 	event := eventFromArg(arg)
 	bind := bindFromObj(event.Obj)
-	err := c.client.RemoveBind(bind.ID)
+	err := c.client.RemoveBind(bind.GetClusterID(), bind.GetServerID())
 	return bind, err
 }
 
+// Update bind wont be updated
 func (c *bindRawAction) Update(arg Arg) (Arg, error) {
-	event := eventFromArg(arg)
-	bind := bindFromObj(event.Obj)
-	cb := c.client.NewBindBuilder()
-	_, err := cb.Use(bind).Commit()
-	return bind, err
+	return nil, nil
 }
 
 func bindFromStruct(arg Event) *state.Bind {
