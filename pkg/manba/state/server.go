@@ -1,6 +1,8 @@
 package state
 
 import (
+	"reflect"
+
 	"github.com/fagongzi/gateway/pkg/pb/metapb"
 	memdb "github.com/hashicorp/go-memdb"
 )
@@ -72,7 +74,7 @@ func getServer(txn *memdb.Txn, searches ...string) (*Server, error) {
 		if !ok {
 			panic(unexpectedType)
 		}
-		return &Server{Server: *deepCopyManbaServer(*server)}, nil
+		return &Server{Server: *DeepCopyManbaServer(*server)}, nil
 	}
 	return nil, ErrNotFound
 }
@@ -160,15 +162,21 @@ func (c *ServerCollection) GetAll() ([]*Server, error) {
 		if !ok {
 			panic(unexpectedType)
 		}
-		res = append(res, &Server{Server: *deepCopyManbaServer(*s)})
+		res = append(res, &Server{Server: *DeepCopyManbaServer(*s)})
 	}
 	txn.Commit()
 	return res, nil
 }
 
-func deepCopyManbaServer(s Server) *metapb.Server {
+// DeepCopyManbaServer returns new server deep cloned by this function
+func DeepCopyManbaServer(s Server) *metapb.Server {
 	d, _ := s.Marshal()
 	res := new(metapb.Server)
 	res.Unmarshal(d)
 	return res
+}
+
+// CompareServer checks two manba apis whether deep equal
+func CompareServer(r1, r2 *Server) bool {
+	return reflect.DeepEqual(&r1.Server, &r2.Server)
 }

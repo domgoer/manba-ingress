@@ -17,7 +17,6 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"reflect"
-	"sort"
 
 	"github.com/domgoer/manba-ingress/pkg/ingress/controller/parser"
 	"github.com/domgoer/manba-ingress/pkg/manba/diff"
@@ -43,7 +42,7 @@ func (m *ManbaController) OnUpdate(state *parser.ManbaState) error {
 		glog.Info("no configuration change, skipping sync to Manba")
 		return nil
 	}
-	m.onUpdate()
+	m.onUpdate(target)
 	return nil
 }
 
@@ -74,13 +73,13 @@ func (m *ManbaController) onUpdate(targetRaw *dump.ManbaRawState) error {
 	return err
 }
 
-func (m *ManbaController) toStable(state *parser.ManbaState) *dump.ManbaRawStat {
+func (m *ManbaController) toStable(state *parser.ManbaState) *dump.ManbaRawState {
 	var s dump.ManbaRawState
-	for _, api := range state.APIs {
-		s.APIs = append(s.APIs, api.API)
-	}
-	sort.SliceStable(s.APIs, func(i, j int) bool {
-		return s.APIs[i].Name < s.APIs[j].Name
-	})
+	// for _, api := range state.APIs {
+	// 	s.APIs = append(s.APIs, api.API)
+	// }
+	// sort.SliceStable(s.APIs, func(i, j int) bool {
+	// 	return s.APIs[i].Name < s.APIs[j].Name
+	// })
 	return &s
 }

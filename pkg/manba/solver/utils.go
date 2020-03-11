@@ -11,7 +11,9 @@ var (
 	differ = gojsondiff.New()
 )
 
-func diff(a, b interface{}) (string, error) {
+// Diff parse a and b to jsonString,then compare them
+// returns the different parts of them
+func Diff(a, b interface{}) (string, error) {
 	aJSON, err := json.Marshal(a)
 	if err != nil {
 		return "", err

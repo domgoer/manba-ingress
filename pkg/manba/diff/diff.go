@@ -131,6 +131,52 @@ func (sc *Syncer) diff() error {
 	return nil
 }
 
-func (sc *Syncer) createUpdate() error {}
+func (sc *Syncer) queueEvent(e crud.Event) error {
+	atomic.AddInt32(&sc.InFlightOps, 1)
+	select {
+	case sc.eventChan <- e:
+		return nil
+	case <-sc.stopChan:
+		return errEnqueueFailed
+	}
+}
 
-func (sc *Syncer) delete() error {}
+func (sc *Syncer) createUpdate() error {
+	var err error
+	createUpdateList := []func() error{
+		sc.createUpdateServers,
+		sc.createUpdateClusters,
+		sc.createUpdateBinds,
+		sc.createUpdateAPIs,
+		sc.createUpdateBinds,
+	}
+
+	for _, createUpdate := range createUpdateList {
+		err = createUpdate()
+		if err != nil {
+			return err
+		}
+		sc.wait()
+	}
+	return nil
+}
+
+func (sc *Syncer) delete() error {
+	var err error
+	deleteList := []func() error{
+		sc.deleteRoutings,
+		sc.deleteAPIs,
+		sc.deleteBinds,
+		sc.deleteClusters,
+		sc.deleteServers,
+	}
+
+	for _, delete := range deleteList {
+		err = delete()
+		if err != nil {
+			return err
+		}
+		sc.wait()
+	}
+	return nil
+}

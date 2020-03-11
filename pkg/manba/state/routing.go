@@ -1,6 +1,8 @@
 package state
 
 import (
+	"reflect"
+
 	"github.com/fagongzi/gateway/pkg/pb/metapb"
 	memdb "github.com/hashicorp/go-memdb"
 )
@@ -72,7 +74,7 @@ func getRouting(txn *memdb.Txn, searches ...string) (*Routing, error) {
 		if !ok {
 			panic(unexpectedType)
 		}
-		return &Routing{Routing: *deepCopyManbaRouting(*routing)}, nil
+		return &Routing{Routing: *DeepCopyManbaRouting(*routing)}, nil
 	}
 	return nil, ErrNotFound
 }
@@ -160,15 +162,21 @@ func (c *RoutingCollection) GetAll() ([]*Routing, error) {
 		if !ok {
 			panic(unexpectedType)
 		}
-		res = append(res, &Routing{Routing: *deepCopyManbaRouting(*s)})
+		res = append(res, &Routing{Routing: *DeepCopyManbaRouting(*s)})
 	}
 	txn.Commit()
 	return res, nil
 }
 
-func deepCopyManbaRouting(s Routing) *metapb.Routing {
+// DeepCopyManbaRouting returns new routing deep cloned by this function
+func DeepCopyManbaRouting(s Routing) *metapb.Routing {
 	d, _ := s.Marshal()
 	res := new(metapb.Routing)
 	res.Unmarshal(d)
 	return res
+}
+
+// CompareRouting checks two manba routings whether deep equal
+func CompareRouting(r1, r2 *Routing) bool {
+	return reflect.DeepEqual(&r1.Routing, &r2.Routing)
 }

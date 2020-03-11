@@ -8,7 +8,6 @@ import (
 	"github.com/domgoer/manba-ingress/pkg/manba/diff"
 	manba "github.com/fagongzi/gateway/pkg/client"
 	"github.com/golang/glog"
-	"github.com/hbagdi/deck/state"
 )
 
 // Stats holds the stats related to a Solve.
@@ -35,16 +34,18 @@ func Solve(doneCh chan struct{}, syncer *diff.Syncer,
 		}
 	}
 
-	errs := syncer.Run(doneCh, parallelism, func(e crud.Event) (crud.Arg, error) {
+	errs := syncer.Run(doneCh, parallelism, func(a crud.Arg) (crud.Arg, error) {
 		var err error
 		var result crud.Arg
-
-		c := e.Obj.(state.ConsoleString)
+		e, ok := a.(crud.Event)
+		if !ok {
+			return nil, errors.New("unknown operation")
+		}
 		switch e.Op {
 		case crud.Create:
 			glog.Infof("creating <%s>, data: %+v", e.Kind, e.Obj)
 		case crud.Update:
-			diffString, err := diff(e.OldObj, e.Obj)
+			diffString, err := Diff(e.OldObj, e.Obj)
 			if err != nil {
 				return nil, err
 			}
