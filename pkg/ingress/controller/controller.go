@@ -97,6 +97,7 @@ func NewManbaController(cfg Config, store store.Store) (*ManbaController, error)
 			PublishStatusAddress: cfg.PublishStatusAddress,
 			PublishService:       cfg.PublishService,
 			ElectionID:           cfg.ElectionID,
+			Concurrency:          cfg.Concurrency,
 			// TODO: update status on shutdown
 			UpdateStatusOnShutdown: false,
 			IngressLister:          store,

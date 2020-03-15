@@ -17,6 +17,9 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"reflect"
+	"sort"
+
+	"github.com/fagongzi/gateway/pkg/pb/metapb"
 
 	"github.com/domgoer/manba-ingress/pkg/ingress/controller/parser"
 	"github.com/domgoer/manba-ingress/pkg/manba/diff"
@@ -35,15 +38,19 @@ func (m *ManbaController) OnUpdate(state *parser.ManbaState) error {
 
 	jsonConfig, err := json.Marshal(target)
 	if err != nil {
-		return errors.Wrap(err, "marshaling Man declarative configuration to JSON")
+		return errors.Wrap(err, "marshaling Manba declarative configuration to JSON")
 	}
 	shaSum := sha256.Sum256(jsonConfig)
 	if reflect.DeepEqual(m.runningConfigHash, shaSum) {
 		glog.Info("no configuration change, skipping sync to Manba")
 		return nil
 	}
-	m.onUpdate(target)
-	return nil
+	err = m.onUpdate(target)
+	if err == nil {
+		glog.Info("successfully synced configuration to Manba")
+		m.runningConfigHash = shaSum
+	}
+	return err
 }
 
 func (m *ManbaController) onUpdate(targetRaw *dump.ManbaRawState) error {
@@ -73,13 +80,44 @@ func (m *ManbaController) onUpdate(targetRaw *dump.ManbaRawState) error {
 	return err
 }
 
-func (m *ManbaController) toStable(state *parser.ManbaState) *dump.ManbaRawState {
-	var s dump.ManbaRawState
-	// for _, api := range state.APIs {
-	// 	s.APIs = append(s.APIs, api.API)
-	// }
-	// sort.SliceStable(s.APIs, func(i, j int) bool {
-	// 	return s.APIs[i].Name < s.APIs[j].Name
-	// })
-	return &s
+func (m *ManbaController) toStable(s *parser.ManbaState) *dump.ManbaRawState {
+	var ms dump.ManbaRawState
+	for _, api := range s.APIs {
+		ms.APIs = append(ms.APIs, &api.API)
+	}
+	sort.SliceStable(ms.APIs, func(i, j int) bool {
+		return ms.APIs[i].Name < ms.APIs[j].Name
+	})
+
+	for _, server := range s.Servers {
+		ms.Servers = append(ms.Servers, &server.Server)
+	}
+	sort.SliceStable(ms.Servers, func(i, j int) bool {
+		return ms.Servers[i].Addr < ms.Servers[j].Addr
+	})
+
+	for _, routing := range s.Routings {
+		ms.Routings = append(ms.Routings, &routing.Routing)
+	}
+	sort.SliceStable(ms.Routings, func(i, j int) bool {
+		return ms.Routings[i].Name < ms.Routings[j].Name
+	})
+
+	for _, svc := range s.Services {
+		ms.Clusters = append(ms.Clusters, &svc.Cluster)
+		for _, svr := range svc.Servers {
+			ms.Binds = append(ms.Binds, &metapb.Bind{
+				ClusterID: svc.Cluster.ID,
+				ServerID:  svr.Server.ID,
+			})
+		}
+	}
+
+	sort.SliceStable(ms.Clusters, func(i, j int) bool {
+		return ms.Clusters[i].Name < ms.Clusters[j].Name
+	})
+	sort.SliceStable(ms.Binds, func(i, j int) bool {
+		return ms.Binds[i].ClusterID < ms.Binds[j].ClusterID && ms.Binds[i].ServerID < ms.Binds[j].ServerID
+	})
+	return &ms
 }

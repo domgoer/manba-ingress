@@ -8,6 +8,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/domgoer/manba-ingress/pkg/utils"
+
 	_ "github.com/domgoer/manba-ingress/pkg/manba/state"
 
 	"github.com/domgoer/manba-ingress/pkg/ingress/annotations"
@@ -47,6 +49,10 @@ func main() {
 		glog.Fatalf("resync period (%vs) is too low ", cfg.SyncPeriod.Seconds())
 	}
 
+	if cfg.ManbaConcurrency < 1 {
+		glog.Fatalf("manba-admin-concurrency (%v) cannot be less than 1", cfg.ManbaConcurrency)
+	}
+
 	if cfg.PublishService == "" && cfg.PublishStatusAddress == "" {
 		glog.Fatal("either --publish-service or --publish-status-address ",
 			"must be specified")
@@ -56,6 +62,18 @@ func main() {
 	_, kubeClient, err := createApiserverClient(cfg.APIServerHost, cfg.KubeConfigFilePath)
 	if err != nil {
 		glog.Fatalf("create k8s client failed, err: %v", err)
+	}
+
+	if cfg.PublishService != "" {
+		svc := cfg.PublishService
+		ns, name, err := utils.ParseNameNS(svc)
+		if err != nil {
+			glog.Fatal(err)
+		}
+		_, err = kubeClient.CoreV1().Services(ns).Get(name, metav1.GetOptions{})
+		if err != nil {
+			glog.Fatalf("unexpected error getting information about service %v: %v", svc, err)
+		}
 	}
 
 	// check namespace exists
@@ -174,6 +192,11 @@ func controllerConfigFromCLIConfig(cfg Config) controller.Config {
 		ResyncPeriod:  cfg.SyncPeriod,
 		SyncRateLimit: cfg.SyncRateLimit,
 		Namespace:     cfg.WatchNamespace,
+		Concurrency:   cfg.ManbaConcurrency,
+
+		PublishService:       cfg.PublishService,
+		PublishStatusAddress: cfg.PublishStatusAddress,
+		UpdateStatus:         cfg.UpdateStatus,
 	}
 }
 

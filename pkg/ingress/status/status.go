@@ -70,6 +70,7 @@ type Config struct {
 	ElectionID string
 
 	UpdateStatusOnShutdown bool
+	Concurrency            int
 
 	IngressLister ingressLister
 

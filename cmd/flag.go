@@ -26,6 +26,7 @@ type Config struct {
 	ManbaAPIServer        string
 	ManbaAPIServerTimeout time.Duration
 	ManbaWorkspace        string
+	ManbaConcurrency      int
 
 	// Resource filtering
 	WatchNamespace string
@@ -43,6 +44,7 @@ type Config struct {
 	// Ingress Status publish resource
 	PublishService       string
 	PublishStatusAddress string
+	UpdateStatus         bool
 }
 
 func flagSet() *pflag.FlagSet {
@@ -62,6 +64,7 @@ TLS handshake`)
 	flags.Duration("manba-api-server-timeout", time.Second*10, "The timeout of connection to Manba API Server")
 	flags.String("manba-workspace", "",
 		"Workspace in Kong Enterprise to be configured")
+	flags.Int("manba-concurrency", 10, "Max number of concurrent requests sent to Manba's Admin API")
 
 	// Resource filtering
 	flags.String("watch-namespace", apiv1.NamespaceAll,
@@ -85,6 +88,8 @@ to reflect those on the service.`)
 		`User customized address to be set in the status of ingress resources.
 The controller will set the endpoint records on the
 ingress using this address.`)
+	flags.Bool("update-status", true, `Indicates if the ingress controller
+should update the Ingress status IP/hostname.`)
 
 	// k8s connection details
 	flags.String("apiserver-host", "",
@@ -129,6 +134,7 @@ func parseFlags() (cfg Config, err error) {
 	cfg.ManbaAPIServer = viper.GetString("manba-api-server-addr")
 	cfg.ManbaWorkspace = viper.GetString("manba-workspace")
 	cfg.ManbaAPIServerTimeout = viper.GetDuration("manba-api-server-timeout")
+	cfg.ManbaConcurrency = viper.GetInt("manba-concurrency")
 
 	// Resource filtering
 	cfg.WatchNamespace = viper.GetString("watch-namespace")
@@ -146,6 +152,7 @@ func parseFlags() (cfg Config, err error) {
 	// Ingress Status publish resource
 	cfg.PublishService = viper.GetString("publish-service")
 	cfg.PublishStatusAddress = viper.GetString("publish-status-address")
+	cfg.UpdateStatus = viper.GetBool("update-status")
 
 	return
 }

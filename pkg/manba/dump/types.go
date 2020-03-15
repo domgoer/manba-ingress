@@ -10,3 +10,4 @@ type ManbaRawState struct {
 	Binds    []*metapb.Bind
 	Routings []*metapb.Routing
 }
+
