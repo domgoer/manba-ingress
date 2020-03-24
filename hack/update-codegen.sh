@@ -20,4 +20,4 @@ all \
 ${PACKAGE_NAME}/pkg/client \
 ${PACKAGE_NAME}/pkg/apis \
 configuration:v1beta1 \
-# --go-header-file ${SCRIPT_ROOT}/hack/boilerplate.go.txt
+ --go-header-file ${SCRIPT_ROOT}/hack/boilerplate.go.txt

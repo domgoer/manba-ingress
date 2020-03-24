@@ -59,7 +59,7 @@ func main() {
 	}
 
 	// init k8s client
-	_, kubeClient, err := createApiserverClient(cfg.APIServerHost, cfg.KubeConfigFilePath)
+	restCfg, kubeClient, err := createApiserverClient(cfg.APIServerHost, cfg.KubeConfigFilePath)
 	if err != nil {
 		glog.Fatalf("create k8s client failed, err: %v", err)
 	}
@@ -97,7 +97,8 @@ func main() {
 	controllerConfig.Manba.Client = manbaCli
 
 	var synced []cache.InformerSynced
-	informers := cache2.CreateInformers(kubeClient, cfg.SyncPeriod, cfg.WatchNamespace)
+	informers := cache2.CreateInformers(kubeClient, restCfg, cfg.SyncPeriod, cfg.WatchNamespace)
+
 	stopCh := make(chan struct{})
 	for _, informer := range informers {
 		go informer.Run(stopCh)
@@ -107,7 +108,7 @@ func main() {
 		runtime.HandleError(fmt.Errorf("Timed out waiting for caches to sync"))
 	}
 
-	s := store.New(annotations.IngressClassValidatorFuncFromObjectMeta(controllerConfig.IngressClass))
+	s := store.New(cache2.GetStore, annotations.IngressClassValidatorFuncFromObjectMeta(controllerConfig.IngressClass))
 	manbaController, err := controller.NewManbaController(controllerConfig, s)
 	if err != nil {
 		glog.Fatalf("create manba controller failed, err: %v", err)
@@ -191,7 +192,6 @@ func controllerConfigFromCLIConfig(cfg Config) controller.Config {
 		IngressClass:  cfg.IngressClass,
 		ResyncPeriod:  cfg.SyncPeriod,
 		SyncRateLimit: cfg.SyncRateLimit,
-		Namespace:     cfg.WatchNamespace,
 		Concurrency:   cfg.ManbaConcurrency,
 
 		PublishService:       cfg.PublishService,

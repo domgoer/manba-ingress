@@ -38,8 +38,6 @@ type Config struct {
 	ResyncPeriod  time.Duration
 	SyncRateLimit float32
 
-	Namespace string
-
 	UpdateStatus         bool
 	PublishService       string
 	PublishStatusAddress string
@@ -87,7 +85,7 @@ func NewManbaController(cfg Config, store store.Store) (*ManbaController, error)
 
 	ec := election.Config{
 		ResourceName:      resourceName,
-		ResourceNamespace: cfg.Namespace,
+		ResourceNamespace: pod.Namespace,
 		ElectionID:        cfg.ElectionID,
 	}
 

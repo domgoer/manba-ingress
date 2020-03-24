@@ -1,0 +1,266 @@
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: manbaingresses.configuration.manba.io
+spec:
+  group: configuration.manba.io
+  version: v1beta1
+  scope: Namespaced
+  names:
+    kind: ManbaIngress
+    plural: manbaingresses
+    shortNames:
+    - mi
+  validation:
+    openAPIV3Schema:
+      properties:
+        proxy:
+          type: object
+          properties:
+            domain:
+              type: string
+            urlRewrite:
+              type: string
+              pattern: ^/.*$
+            urlPattern:
+              type: string
+              pattern: ^/.*$
+            method:
+              type: string
+            attrName:
+              type: string
+            conditions: &conditions
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      parameter: &parameter
+                        type: object
+                        properties:
+                          name:
+                            type: string
+                          index:
+                            type: integer
+                            minimum: 0
+                          source:
+                            type: string
+                            enum:
+                            - queryString
+                            - formData
+                            - jsonBody
+                            - header
+                            - cookie
+                            - pathValue
+                      expect:
+                        type: string
+                      cmp:
+                        type: string
+                        enum:
+                        - eq
+                        - lt
+                        - le
+                        - gt
+                        - ge
+                        - in
+                        - match
+            cache:
+              type: object
+              properties:
+                deadline:
+                  type: integer
+                  minimum: 0
+                keys:
+                  type: array
+                  items: *parameter
+            defaultValue:
+              type: object
+              properties:
+                body:
+                  type: string
+                headers:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      value:
+                        type: string
+                cookie:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      value:
+                        type: string
+            useDefault:
+              type: boolean
+            batchIndex:
+              type: integer
+              minimum: 0
+            writeTimeout:
+              type: integer
+            readTimeout:
+              type: integer
+            hostType:
+              type: string
+              enum:
+              - origin
+              - serverAddress
+              - custom
+            customHost:
+              type: string 
+            retryStrategy:
+              type: object
+              properties:
+                interval:
+                  type: integer
+                maxTimes:
+                  type: integer
+                codes:
+                  type: array
+                  items:
+                    type: integer
+        routing:
+          type: object
+          properties:
+            status:
+              type: string
+              enum:
+              - up
+              - down
+            trafficRate:
+              type: integer
+            strategy:
+              type: string
+              enum:
+              - copy
+              - split
+            conditions: *conditions
+
+        api:      
+          type: object
+          properties:
+            urlPattern:
+              type: string
+              pattern: ^/.*$
+            method:
+              type: string
+            status:
+              type: string
+              enum:
+              - up
+              - down
+            ipAddressControl:
+              type: object
+              properties:
+                whiteList:
+                  type: array
+                  items:
+                    type: string
+                blackList:
+                  type: array
+                  items:
+                    type: string
+            defaultValue:
+              type: object
+              properties:
+                body:
+                  type: string
+                headers:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      value:
+                        type: string
+                cookie:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      value:
+                        type: string
+                perms:
+                  type: array
+                  items:
+                    type: string
+                authFilter:
+                  type: string
+                useDefault:
+                  type: boolean
+                matchRule:
+                  type: string
+                  enum:
+                  - default
+                  - all
+                  - any
+                position:
+                  type: integer
+                  minimum: 0
+                tags:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      value:
+                        type: string
+                maxQPS:
+                  type: integer
+                circuitBreaker:
+                  type: object
+                  properties:
+                    closeTimeout:
+                      type: integer
+                      minimum: 0
+                    halfTrafficRate:
+                      type: integer
+                      minimum: 0
+                    rateCheckPeriod:
+                      type: integer
+                      minimum: 0
+                    failureRateToClose:
+                      type: integer
+                      minimum: 0
+                    succeedRateToOpen:
+                      type: integer
+                      minimum: 0
+                rateLimitOption:
+                  type: string
+                  enum:
+                  - wait
+                  - reject
+                webSocketOptions:
+                  type: object
+                  properties:
+                    origin:
+                      type: string
+                renderTemplate:
+                  type: object
+                  properties:
+                    objects:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          name:
+                            type: string
+                          flatAttrs:
+                            type: boolean
+                          attrs:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                name:
+                                  type: string
+                                extractExp:
+                                  type: string
