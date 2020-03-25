@@ -7,8 +7,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/domgoer/manba-ingress/pkg/ingress/controller/parser"
 	"github.com/domgoer/manba-ingress/pkg/ingress/k8s"
 	"github.com/domgoer/manba-ingress/pkg/ingress/status"
+	"github.com/pkg/errors"
 
 	"github.com/domgoer/manba-ingress/pkg/ingress/election"
 	"github.com/domgoer/manba-ingress/pkg/ingress/store"
@@ -60,20 +62,24 @@ type ManbaController struct {
 	stopLock       sync.Mutex
 	isShuttingDown bool
 
+	parser *parser.Parser
+
 	runningConfigHash [32]byte
 
 	syncStatus status.Syncer
 }
 
-func NewManbaController(cfg Config, store store.Store) (*ManbaController, error) {
+// NewManbaController creates a new Manba Ingress controller.
+func NewManbaController(cfg Config, updateCh *channels.RingChannel, store store.Store) (*ManbaController, error) {
 	m := &ManbaController{
 		cfg:             cfg,
 		store:           store,
-		updateCh:        channels.NewRingChannel(1024),
+		updateCh:        updateCh,
 		syncRateLimiter: flowcontrol.NewTokenBucketRateLimiter(cfg.SyncRateLimit, 1),
 		stopCh:          make(chan struct{}),
 	}
 	m.syncQueue = task.NewTaskQueue(m.syncIngress)
+	m.parser = parser.New(m.store)
 
 	pod, err := k8s.GetPodDetails(cfg.KubeClient)
 	if err != nil {
@@ -139,9 +145,20 @@ func (m *ManbaController) syncIngress(interface{}) error {
 
 	glog.V(2).Infof("syncing Ingress configuration...")
 
+	state, err := m.parser.Build()
+	if err != nil {
+		return errors.Wrap(err, "error building manba state")
+	}
+	err = m.OnUpdate(state)
+	if err != nil {
+		glog.Errorf("unexpected failure updating Kong configuration: \n%v", err)
+		return err
+	}
+
 	return nil
 }
 
+// Start sync ingress
 func (m *ManbaController) Start() {
 	glog.Infof("starting Ingress controller")
 

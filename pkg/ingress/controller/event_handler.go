@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"fmt"
 	"reflect"
 
 	corev1 "k8s.io/api/core/v1"
@@ -55,6 +56,7 @@ func (r ResourceEventHandler) OnAdd(obj interface{}) {
 
 // OnUpdate is invoked whenever a resource is updated.
 func (r ResourceEventHandler) OnUpdate(old, obj interface{}) {
+	fmt.Println("on update")
 	oldObj, err := meta.Accessor(old)
 	if err != nil {
 		return

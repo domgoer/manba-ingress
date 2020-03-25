@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/domgoer/manba-ingress/pkg/utils"
+	"github.com/eapache/channels"
 
 	_ "github.com/domgoer/manba-ingress/pkg/manba/state"
 
@@ -96,8 +97,10 @@ func main() {
 	controllerConfig.KubeClient = kubeClient
 	controllerConfig.Manba.Client = manbaCli
 
+	updateChannel := channels.NewRingChannel(1024)
+
 	var synced []cache.InformerSynced
-	informers := cache2.CreateInformers(kubeClient, restCfg, cfg.SyncPeriod, cfg.WatchNamespace)
+	informers := cache2.CreateInformers(kubeClient, restCfg, cfg.SyncPeriod, cfg.WatchNamespace, cfg.IngressClass, updateChannel)
 
 	stopCh := make(chan struct{})
 	for _, informer := range informers {
@@ -108,8 +111,8 @@ func main() {
 		runtime.HandleError(fmt.Errorf("Timed out waiting for caches to sync"))
 	}
 
-	s := store.New(cache2.GetStore, annotations.IngressClassValidatorFuncFromObjectMeta(controllerConfig.IngressClass))
-	manbaController, err := controller.NewManbaController(controllerConfig, s)
+	s := store.New(kubeClient, cache2.GetStore, annotations.IngressClassValidatorFuncFromObjectMeta(controllerConfig.IngressClass))
+	manbaController, err := controller.NewManbaController(controllerConfig, updateChannel, s)
 	if err != nil {
 		glog.Fatalf("create manba controller failed, err: %v", err)
 	}

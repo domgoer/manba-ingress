@@ -2,6 +2,7 @@ package store
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/golang/glog"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -11,6 +12,7 @@ import (
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -19,6 +21,7 @@ const (
 	ing = "ingress"
 	svc = "service"
 	pod = "pod"
+	mi  = "manbaIng"
 )
 
 // Store is the interface that wraps the required methods to gather information
@@ -32,7 +35,8 @@ type Store interface {
 }
 
 type store struct {
-	getCache           func(string) cache.Store
+	client             kubernetes.Interface
+	getStore           func(string) cache.Store
 	isValidIngresClass func(objectMeta *metav1.ObjectMeta) bool
 }
 
@@ -46,7 +50,7 @@ func init() {
 
 func (s *store) GetEndpointsForService(namespace, name string) (*corev1.Endpoints, error) {
 	key := fmt.Sprintf("%v/%v", namespace, name)
-	eps, exists, err := s.getCache(ep).GetByKey(key)
+	eps, exists, err := s.getStore(ep).GetByKey(key)
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +64,7 @@ func (s *store) GetEndpointsForService(namespace, name string) (*corev1.Endpoint
 func (s *store) ListIngresses() []*networkingv1beta1.Ingress {
 	// filter ingress rules
 	var ingresses []*networkingv1beta1.Ingress
-	for _, item := range s.getCache(ing).List() {
+	for _, item := range s.getStore(ing).List() {
 		ing := networkingIngressV1Beta1(item)
 		if !s.isValidIngresClass(&ing.ObjectMeta) {
 			continue
@@ -73,7 +77,7 @@ func (s *store) ListIngresses() []*networkingv1beta1.Ingress {
 
 func (s *store) GetService(namespace, name string) (*corev1.Service, error) {
 	key := fmt.Sprintf("%v/%v", namespace, name)
-	service, exists, err := s.getCache(svc).GetByKey(key)
+	service, exists, err := s.getStore(svc).GetByKey(key)
 	if err != nil {
 		return nil, err
 	}
@@ -84,17 +88,42 @@ func (s *store) GetService(namespace, name string) (*corev1.Service, error) {
 }
 
 func (s *store) GetPodsForService(namespace, name string) ([]corev1.Pod, error) {
-	return nil, nil
+	svc, err := s.GetService(namespace, name)
+	if err != nil {
+		return nil, err
+	}
+	var selector []string
+	for k, v := range svc.Spec.Selector {
+		selector = append(selector, k+"="+v)
+	}
+
+	pods, err := s.client.CoreV1().Pods(namespace).List(metav1.ListOptions{
+		LabelSelector: strings.Join(selector, ","),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return pods.Items, nil
 }
 
 func (s *store) GetManbaIngress(namespace, name string) (*configurationv1beta1.ManbaIngress, error) {
-	panic("implement me")
+	key := fmt.Sprintf("%v/%v", namespace, name)
+	p, exist, err := s.getStore(mi).GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exist {
+		return nil, fmt.Errorf("ManbaIngress %v was not found", key)
+	}
+	return p.(*configurationv1beta1.ManbaIngress), nil
 }
 
 // New creates a new object store to be used in the ingress controller
-func New(getCache func(string) cache.Store, isValidIngresClassFunc func(objectMeta *metav1.ObjectMeta) bool) Store {
+func New(kc kubernetes.Interface, getStore func(string) cache.Store, isValidIngresClassFunc func(objectMeta *metav1.ObjectMeta) bool) Store {
 	return &store{
-		getCache:           getCache,
+		client:             kc,
+		getStore:           getStore,
 		isValidIngresClass: isValidIngresClassFunc,
 	}
 }

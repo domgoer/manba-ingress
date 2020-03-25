@@ -23,6 +23,17 @@ const (
 	DefaultIngressClass = "manba"
 )
 
+// IngressClassValidatorFunc returns a function which can validate if an Object
+// belongs to an the ingressClass or not.
+func IngressClassValidatorFunc(
+	ingressClass string) func(obj metav1.Object) bool {
+
+	return func(obj metav1.Object) bool {
+		ingress := obj.GetAnnotations()[ingressClassKey]
+		return validIngress(ingress, ingressClass)
+	}
+}
+
 // IngressClassValidatorFuncFromObjectMeta returns a function which
 // can validate if an ObjectMeta belongs to an the ingressClass or not.
 func IngressClassValidatorFuncFromObjectMeta(
