@@ -31,6 +31,7 @@ func NewManbaState() (*ManbaState, error) {
 			apiTableName:     apiTableSchema,
 			routingTableName: routingTableSchema,
 			serverTableName:  serverTableSchema,
+			bindTableName:    bindTableSchema,
 		},
 	}
 	memDB, err := memdb.NewMemDB(schema)
@@ -45,6 +46,7 @@ func NewManbaState() (*ManbaState, error) {
 	state.APIs = (*APICollection)(&state.common)
 	state.Servers = (*ServerCollection)(&state.common)
 	state.Routings = (*RoutingCollection)(&state.common)
+	state.Binds = (*BindCollection)(&state.common)
 	return &state, nil
 }
 

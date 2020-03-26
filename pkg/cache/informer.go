@@ -53,10 +53,6 @@ func CreateInformers(k8sCli kubernetes.Interface, cfg *rest.Config, syncPeriod t
 	svcInformer.AddEventHandler(reh)
 	informers = append(informers, svcInformer)
 
-	podInformer := informerFactory.Core().V1().Pods().Informer()
-	storesMap["pod"] = podInformer.GetStore()
-	informers = append(informers, podInformer)
-
 	manbaIngInformer := manbaInformerFactory.Configuration().V1beta1().ManbaIngresses().Informer()
 	storesMap["manbaIng"] = manbaIngInformer.GetStore()
 	manbaIngInformer.AddEventHandler(reh)

@@ -17,9 +17,17 @@ type ManbaIngress struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	API     *metapb.API          `json:"api,omitempty"`
-	Routing *metapb.Routing      `json:"routing,omitempty"`
-	Proxy   *metapb.DispatchNode `json:"proxy,omitempty"`
+	API     *metapb.API     `json:"api,omitempty"`
+	Routing *metapb.Routing `json:"routing,omitempty"`
+	Proxy   *Proxy          `json:"proxy,omitempty"`
+}
+
+// Proxy for cluster
+type Proxy struct {
+	*metapb.DispatchNode
+	Domain     string `json:"domain,omitempty"`
+	Method     string `json:"method,omitempty"`
+	URLPattern string `json:"urlPattern,omitempty"`
 }
 
 // ManbaIngressList is a top-level list type. The client methods for
@@ -61,15 +69,23 @@ func (in *ManbaIngress) DeepCopyInto(out *ManbaIngress) {
 		}
 	}
 	if in.Proxy != nil {
-		in, out := in.Proxy, out.Proxy
-		b, err := in.Marshal()
-		if err != nil {
-			glog.Errorf("unexpected error copying configuration: %v", err)
-		}
-		err = out.Unmarshal(b)
-		if err != nil {
-			glog.Errorf("unexpected error copying configuration: %v", err)
-		}
+		in.Proxy.DeepCopyInto(out.Proxy)
 	}
 	return
+}
+
+// DeepCopyInto deepcopy function, copying the receiver, writing into out. in must be non-nil.
+func (in *Proxy) DeepCopyInto(out *Proxy) {
+	out.URLPattern = in.URLPattern
+	out.Method = in.Method
+	out.Domain = in.Domain
+	inDN, outDN := in.DispatchNode, out.DispatchNode
+	b, err := inDN.Marshal()
+	if err != nil {
+		glog.Errorf("unexpected error copying configuration: %v", err)
+	}
+	err = outDN.Unmarshal(b)
+	if err != nil {
+		glog.Errorf("unexpected error copying configuration: %v", err)
+	}
 }

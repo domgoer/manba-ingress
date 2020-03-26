@@ -19,14 +19,14 @@ spec:
           properties:
             domain:
               type: string
-            urlRewrite:
-              type: string
-              pattern: ^/.*$
             urlPattern:
               type: string
               pattern: ^/.*$
             method:
               type: string
+            urlRewrite:
+              type: string
+              pattern: ^/.*$
             attrName:
               type: string
             conditions: &conditions

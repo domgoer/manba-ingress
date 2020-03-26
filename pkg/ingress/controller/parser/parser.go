@@ -31,8 +31,7 @@ type Service struct {
 	metapb.Cluster
 	Servers []Server
 
-	Dispatches []metapb.DispatchNode
-	APIs       []API
+	APIs []API
 
 	Namespace  string
 	K8SService corev1.Service
@@ -129,7 +128,6 @@ func (p *Parser) Build() (*ManbaState, error) {
 	state.APIs = p.fillAPIs(state)
 
 	state.Routings = p.fillRoutings(state)
-
 	return &state, nil
 }
 
@@ -301,10 +299,10 @@ func (p *Parser) fillOverrides(state ManbaState) error {
 			overrideAPI(&state.Services[i].APIs[j], manbaIngress)
 		}
 		// Servers
-		for j := 0; i < len(state.Servers); j++ {
+		for j := 0; j < len(state.Servers); j++ {
 			pods, err := p.getPodsFromService(state.Services[i])
 			if err == nil {
-				overrideServer(&state.Servers[i], pods)
+				overrideServer(&state.Servers[j], pods)
 			} else {
 				glog.Error(errors.Wrapf(err, "fetching Pods from services '%v' in namespace '%v'",
 					state.Services[i].K8SService.Name, state.Services[i].Namespace))
@@ -524,8 +522,15 @@ func overrideServiceByManbaIngress(service *Service, manbaIngress *configuration
 	}
 
 	// s := manbaIngress.Proxy
+	p := manbaIngress.Proxy
 
-	// TODO: add dispatch node
+	for idx, api := range service.APIs {
+		// match
+		if api.URLPattern == p.URLPattern && api.Domain == p.Domain && api.Method == p.Method {
+			api.API.Nodes = append(api.API.Nodes, p.DispatchNode)
+			service.APIs[idx] = api
+		}
+	}
 }
 
 // overrideAPI  sets Route fields by ManbaIngress first, then by annotation

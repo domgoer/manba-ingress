@@ -20,7 +20,6 @@ const (
 	ep  = "endpoint"
 	ing = "ingress"
 	svc = "service"
-	pod = "pod"
 	mi  = "manbaIng"
 )
 

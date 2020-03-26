@@ -122,7 +122,7 @@ func (r *Registry) Delete(kind Kind, arg ...Arg) (Arg, error) {
 }
 
 // Do calls an aciton based on op with arg and returns the result and error.
-func (r *Registry) Do(kind Kind, op Op, arg ...Arg) (Arg, error) {
+func (r *Registry) Do(kind Kind, op Op, arg Arg) (Arg, error) {
 	a, err := r.Get(kind)
 	if err != nil {
 		return nil, errors.Wrapf(err, "%v failed", op)

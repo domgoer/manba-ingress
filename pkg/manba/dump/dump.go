@@ -6,6 +6,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// Get raw data from manba api-server
 func Get(client manba.Client) (*ManbaRawState, error) {
 	var res ManbaRawState
 	err := client.GetAPIList(func(a *metapb.API) bool {

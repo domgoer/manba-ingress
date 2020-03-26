@@ -18,6 +18,11 @@ const (
 var bindTableSchema = &memdb.TableSchema{
 	Name: bindTableName,
 	Indexes: map[string]*memdb.IndexSchema{
+		"id": {
+			Name:    "id",
+			Unique:  true,
+			Indexer: &memdb.StringFieldIndex{Field: "Name"},
+		},
 		"name": {
 			Name:         "name",
 			Unique:       true,

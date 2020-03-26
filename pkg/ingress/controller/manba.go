@@ -75,8 +75,10 @@ func (m *ManbaController) onUpdate(targetRaw *dump.ManbaRawState) error {
 	if err != nil {
 		return errors.Wrap(err, "new syncer")
 	}
+
 	syncer.SilenceWarnings = true
 	_, err = solver.Solve(nil, syncer, client, m.cfg.Concurrency)
+
 	return err
 }
 
