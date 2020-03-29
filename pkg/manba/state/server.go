@@ -63,7 +63,7 @@ func (c *ServerCollection) Add(server Server) error {
 func getServer(txn *memdb.Txn, searches ...string) (*Server, error) {
 	for _, search := range searches {
 		res, err := multiIndexLookupUsingTxn(txn, serverTableName,
-			[]string{"name", "id"}, search)
+			[]string{"addr", "id"}, search)
 		if err == ErrNotFound {
 			continue
 		}
@@ -74,7 +74,7 @@ func getServer(txn *memdb.Txn, searches ...string) (*Server, error) {
 		if !ok {
 			panic(unexpectedType)
 		}
-		return &Server{Server: *DeepCopyManbaServer(*server)}, nil
+		return &Server{Server: *DeepCopyManbaServer(server)}, nil
 	}
 	return nil, ErrNotFound
 }
@@ -162,21 +162,25 @@ func (c *ServerCollection) GetAll() ([]*Server, error) {
 		if !ok {
 			panic(unexpectedType)
 		}
-		res = append(res, &Server{Server: *DeepCopyManbaServer(*s)})
+		res = append(res, &Server{Server: *DeepCopyManbaServer(s)})
 	}
 	txn.Commit()
 	return res, nil
 }
 
 // DeepCopyManbaServer returns new server deep cloned by this function
-func DeepCopyManbaServer(s Server) *metapb.Server {
-	d, _ := s.Marshal()
+func DeepCopyManbaServer(s *Server) *metapb.Server {
 	res := new(metapb.Server)
-	res.Unmarshal(d)
+	deepCopyManbaStruct(s, res)
 	return res
 }
 
 // CompareServer checks two manba apis whether deep equal
 func CompareServer(r1, r2 *Server) bool {
+	d1 := DeepCopyManbaServer(r1)
+	d2 := DeepCopyManbaServer(r2)
+
+	d1.XXX_unrecognized = nil
+	d2.XXX_unrecognized = nil
 	return reflect.DeepEqual(&r1.Server, &r2.Server)
 }

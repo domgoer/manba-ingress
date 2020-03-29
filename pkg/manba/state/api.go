@@ -74,7 +74,7 @@ func getAPI(txn *memdb.Txn, searches ...string) (*API, error) {
 		if !ok {
 			panic(unexpectedType)
 		}
-		return &API{API: *DeepCopyManbaAPI(*api)}, nil
+		return &API{API: *DeepCopyManbaAPI(api)}, nil
 	}
 	return nil, ErrNotFound
 }
@@ -162,21 +162,26 @@ func (c *APICollection) GetAll() ([]*API, error) {
 		if !ok {
 			panic(unexpectedType)
 		}
-		res = append(res, &API{API: *DeepCopyManbaAPI(*s)})
+		res = append(res, &API{API: *DeepCopyManbaAPI(s)})
 	}
 	txn.Commit()
 	return res, nil
 }
 
 // DeepCopyManbaAPI returns new api deep cloned by this function
-func DeepCopyManbaAPI(s API) *metapb.API {
-	d, _ := s.Marshal()
+func DeepCopyManbaAPI(s *API) *metapb.API {
 	res := new(metapb.API)
-	res.Unmarshal(d)
+	deepCopyManbaStruct(s, res)
 	return res
 }
 
 // CompareAPI checks two manba apis whether deep equal
 func CompareAPI(r1, r2 *API) bool {
-	return reflect.DeepEqual(&r1.API, &r2.API)
+	d1 := DeepCopyManbaAPI(r1)
+	d2 := DeepCopyManbaAPI(r2)
+
+	d1.XXX_unrecognized = nil
+	d2.XXX_unrecognized = nil
+
+	return reflect.DeepEqual(d1, d2)
 }

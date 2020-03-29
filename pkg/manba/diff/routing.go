@@ -68,7 +68,7 @@ func (sc *Syncer) createUpdateRoutings() error {
 }
 
 func (sc *Syncer) createUpdateRouting(routing *state.Routing) (*crud.Event, error) {
-	manbaRouting := state.DeepCopyManbaRouting(*routing)
+	manbaRouting := state.DeepCopyManbaRouting(routing)
 	newRouting := &state.Routing{Routing: *manbaRouting}
 
 	current, err := sc.currentState.Routings.Get(newRouting.Identifier())

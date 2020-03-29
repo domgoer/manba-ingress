@@ -19,13 +19,13 @@ import (
 	"reflect"
 	"sort"
 
-	"github.com/fagongzi/gateway/pkg/pb/metapb"
-
 	"github.com/domgoer/manba-ingress/pkg/ingress/controller/parser"
 	"github.com/domgoer/manba-ingress/pkg/manba/diff"
 	"github.com/domgoer/manba-ingress/pkg/manba/dump"
 	"github.com/domgoer/manba-ingress/pkg/manba/solver"
 	"github.com/domgoer/manba-ingress/pkg/manba/state"
+	"github.com/domgoer/manba-ingress/pkg/utils"
+	"github.com/fagongzi/gateway/pkg/pb/metapb"
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
 )
@@ -45,7 +45,7 @@ func (m *ManbaController) OnUpdate(state *parser.ManbaState) error {
 		glog.Info("no configuration change, skipping sync to Manba")
 		return nil
 	}
-	err = m.onUpdate(target)
+	err = m.onUpdate(state)
 	if err == nil {
 		glog.Info("successfully synced configuration to Manba")
 		m.runningConfigHash = shaSum
@@ -53,13 +53,9 @@ func (m *ManbaController) OnUpdate(state *parser.ManbaState) error {
 	return err
 }
 
-func (m *ManbaController) onUpdate(targetRaw *dump.ManbaRawState) error {
+func (m *ManbaController) onUpdate(p *parser.ManbaState) error {
+	targetRaw := m.toStable(p)
 	client := m.cfg.Client
-
-	targetState, err := state.Get(targetRaw)
-	if err != nil {
-		return errors.Wrap(err, "get target state")
-	}
 
 	raw, err := dump.Get(client)
 	if err != nil {
@@ -69,6 +65,16 @@ func (m *ManbaController) onUpdate(targetRaw *dump.ManbaRawState) error {
 	currentState, err := state.Get(raw)
 	if err != nil {
 		return errors.Wrap(err, "get current state")
+	}
+
+	err = m.setTargetsIDs(p, targetRaw, currentState)
+	if err != nil {
+		return errors.Wrap(err, "set target IDs")
+	}
+
+	targetState, err := state.Get(targetRaw)
+	if err != nil {
+		return errors.Wrap(err, "get target state")
 	}
 
 	syncer, err := diff.NewSyncer(currentState, targetState)
@@ -122,4 +128,61 @@ func (m *ManbaController) toStable(s *parser.ManbaState) *dump.ManbaRawState {
 		return ms.Binds[i].ClusterID < ms.Binds[j].ClusterID && ms.Binds[i].ServerID < ms.Binds[j].ServerID
 	})
 	return &ms
+}
+
+// setTargetsIDs gets their id from the existing state in manba and fill it into k8s state
+// p: Used to obtain the relationship between various resources
+func (m *ManbaController) setTargetsIDs(p *parser.ManbaState, target *dump.ManbaRawState, current *state.ManbaState) error {
+	for _, server := range target.Servers {
+		if server.ID == 0 {
+			s, err := current.Servers.Get(server.Addr)
+			if err == state.ErrNotFound {
+				server.ID = utils.SnowID()
+			} else if err != nil {
+				return err
+			} else {
+				server.ID = s.GetID()
+			}
+		}
+	}
+	for _, cluster := range target.Clusters {
+		if cluster.ID == 0 {
+			c, err := current.Clusters.Get(cluster.Name)
+			if err == state.ErrNotFound {
+				cluster.ID = utils.SnowID()
+			} else if err != nil {
+				return err
+			} else {
+				cluster.ID = c.GetID()
+			}
+		}
+	}
+
+	for _, routing := range target.Routings {
+		if routing.ID == 0 {
+			r, err := current.Routings.Get(routing.Name)
+			if err == state.ErrNotFound {
+				routing.ID = utils.SnowID()
+			} else if err != nil {
+				return err
+			} else {
+				routing.ID = r.GetID()
+			}
+		}
+
+	}
+	for _, api := range target.APIs {
+		if api.GetID() == 0 {
+			a, err := current.APIs.Get(api.Name)
+			if err == state.ErrNotFound {
+				api.ID = utils.SnowID()
+			} else if err != nil {
+				return err
+			} else {
+				api.ID = a.GetID()
+			}
+		}
+	}
+
+	return nil
 }

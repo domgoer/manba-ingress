@@ -7,6 +7,11 @@ import (
 	"github.com/fagongzi/gateway/pkg/pb/metapb"
 )
 
+type pb interface {
+	Marshal() ([]byte, error)
+	Unmarshal([]byte) error
+}
+
 // Metadata contains additional information for an entity
 type Metadata struct {
 	meta map[string]interface{}
@@ -131,4 +136,12 @@ func (c *Bind) Identifier() string {
 // Equal returns true if c and c2 are equal.
 func (c *Bind) Equal(c2 *Bind) bool {
 	return reflect.DeepEqual(c, c2)
+}
+
+func deepCopyManbaStruct(src, dist pb) error {
+	data, err := src.Marshal()
+	if err != nil {
+		return err
+	}
+	return dist.Unmarshal(data)
 }

@@ -68,7 +68,7 @@ func (sc *Syncer) createUpdateServers() error {
 }
 
 func (sc *Syncer) createUpdateServer(server *state.Server) (*crud.Event, error) {
-	manbaServer := state.DeepCopyManbaServer(*server)
+	manbaServer := state.DeepCopyManbaServer(server)
 	newServer := &state.Server{Server: *manbaServer}
 
 	current, err := sc.currentState.Servers.Get(newServer.Identifier())

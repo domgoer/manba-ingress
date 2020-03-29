@@ -76,7 +76,7 @@ func getBind(txn *memdb.Txn, searches ...string) (*Bind, error) {
 		if !ok {
 			panic(unexpectedType)
 		}
-		return &Bind{Bind: *DeepCopyManbaBind(*bind)}, nil
+		return &Bind{Bind: *DeepCopyManbaBind(bind)}, nil
 	}
 	return nil, ErrNotFound
 }
@@ -163,21 +163,25 @@ func (c *BindCollection) GetAll() ([]*Bind, error) {
 		if !ok {
 			panic(unexpectedType)
 		}
-		res = append(res, &Bind{Bind: *DeepCopyManbaBind(*s)})
+		res = append(res, &Bind{Bind: *DeepCopyManbaBind(s)})
 	}
 	txn.Commit()
 	return res, nil
 }
 
 // DeepCopyManbaBind returns new bind deep cloned by this function
-func DeepCopyManbaBind(s Bind) *metapb.Bind {
-	d, _ := s.Marshal()
+func DeepCopyManbaBind(s *Bind) *metapb.Bind {
 	res := new(metapb.Bind)
-	res.Unmarshal(d)
+	deepCopyManbaStruct(s, res)
 	return res
 }
 
 // CompareBind checks two manba apis whether deep equal
 func CompareBind(r1, r2 *Bind) bool {
+	d1 := DeepCopyManbaBind(r1)
+	d2 := DeepCopyManbaBind(r2)
+
+	d1.XXX_unrecognized = nil
+	d2.XXX_unrecognized = nil
 	return reflect.DeepEqual(&r1.Bind, &r2.Bind)
 }

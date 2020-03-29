@@ -44,6 +44,8 @@ type Config struct {
 	PublishService       string
 	PublishStatusAddress string
 
+	// MachineID uint16
+
 	Concurrency int
 }
 
@@ -151,7 +153,7 @@ func (m *ManbaController) syncIngress(interface{}) error {
 	}
 	err = m.OnUpdate(state)
 	if err != nil {
-		glog.Errorf("unexpected failure updating Kong configuration: \n%v", err)
+		glog.Errorf("unexpected failure updating Manba configuration: \n%v", err)
 		return err
 	}
 

@@ -74,7 +74,7 @@ func getRouting(txn *memdb.Txn, searches ...string) (*Routing, error) {
 		if !ok {
 			panic(unexpectedType)
 		}
-		return &Routing{Routing: *DeepCopyManbaRouting(*routing)}, nil
+		return &Routing{Routing: *DeepCopyManbaRouting(routing)}, nil
 	}
 	return nil, ErrNotFound
 }
@@ -162,21 +162,25 @@ func (c *RoutingCollection) GetAll() ([]*Routing, error) {
 		if !ok {
 			panic(unexpectedType)
 		}
-		res = append(res, &Routing{Routing: *DeepCopyManbaRouting(*s)})
+		res = append(res, &Routing{Routing: *DeepCopyManbaRouting(s)})
 	}
 	txn.Commit()
 	return res, nil
 }
 
 // DeepCopyManbaRouting returns new routing deep cloned by this function
-func DeepCopyManbaRouting(s Routing) *metapb.Routing {
-	d, _ := s.Marshal()
+func DeepCopyManbaRouting(s *Routing) *metapb.Routing {
 	res := new(metapb.Routing)
-	res.Unmarshal(d)
+	deepCopyManbaStruct(s, res)
 	return res
 }
 
 // CompareRouting checks two manba routings whether deep equal
 func CompareRouting(r1, r2 *Routing) bool {
+	d1 := DeepCopyManbaRouting(r1)
+	d2 := DeepCopyManbaRouting(r2)
+
+	d1.XXX_unrecognized = nil
+	d2.XXX_unrecognized = nil
 	return reflect.DeepEqual(&r1.Routing, &r2.Routing)
 }

@@ -74,7 +74,7 @@ func getCluster(txn *memdb.Txn, searches ...string) (*Cluster, error) {
 		if !ok {
 			panic(unexpectedType)
 		}
-		return &Cluster{Cluster: *DeepCopyManbaCluster(*cluster)}, nil
+		return &Cluster{Cluster: *DeepCopyManbaCluster(cluster)}, nil
 	}
 	return nil, ErrNotFound
 }
@@ -162,21 +162,25 @@ func (c *ClusterCollection) GetAll() ([]*Cluster, error) {
 		if !ok {
 			panic(unexpectedType)
 		}
-		res = append(res, &Cluster{Cluster: *DeepCopyManbaCluster(*s)})
+		res = append(res, &Cluster{Cluster: *DeepCopyManbaCluster(s)})
 	}
 	txn.Commit()
 	return res, nil
 }
 
 // DeepCopyManbaCluster returns new cluster deep cloned by this function
-func DeepCopyManbaCluster(s Cluster) *metapb.Cluster {
-	d, _ := s.Marshal()
+func DeepCopyManbaCluster(s *Cluster) *metapb.Cluster {
 	res := new(metapb.Cluster)
-	res.Unmarshal(d)
+	deepCopyManbaStruct(s, res)
 	return res
 }
 
-// CompareAPI checks two manba clusters whether deep equal
+// CompareCluster checks two manba clusters whether deep equal
 func CompareCluster(r1, r2 *Cluster) bool {
+	d1 := DeepCopyManbaCluster(r1)
+	d2 := DeepCopyManbaCluster(r2)
+
+	d1.XXX_unrecognized = nil
+	d2.XXX_unrecognized = nil
 	return reflect.DeepEqual(&r1.Cluster, &r2.Cluster)
 }
