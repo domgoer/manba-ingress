@@ -21,13 +21,7 @@ var bindTableSchema = &memdb.TableSchema{
 		"id": {
 			Name:    "id",
 			Unique:  true,
-			Indexer: &memdb.StringFieldIndex{Field: "Name"},
-		},
-		"name": {
-			Name:         "name",
-			Unique:       true,
-			Indexer:      &memdb.StringFieldIndex{Field: "Name"},
-			AllowMissing: true,
+			Indexer: &memdb.StringFieldIndex{Field: "ID"},
 		},
 		all: allIndex,
 	},
@@ -42,10 +36,10 @@ func (c *BindCollection) Add(bind Bind) error {
 	txn := c.db.Txn(true)
 	defer txn.Abort()
 
-	bind.Name = fmt.Sprintf("%d-%d", bind.ClusterID, bind.ServerID)
+	bind.ID = fmt.Sprintf("%d-%d", bind.ClusterID, bind.ServerID)
 
 	var searchBy []string
-	searchBy = append(searchBy, bind.Name)
+	searchBy = append(searchBy, bind.ID)
 
 	_, err := getBind(txn, searchBy...)
 	if err == nil {
@@ -65,7 +59,7 @@ func (c *BindCollection) Add(bind Bind) error {
 func getBind(txn *memdb.Txn, searches ...string) (*Bind, error) {
 	for _, search := range searches {
 		res, err := multiIndexLookupUsingTxn(txn, bindTableName,
-			[]string{"name"}, search)
+			[]string{"id"}, search)
 		if err == ErrNotFound {
 			continue
 		}
@@ -95,14 +89,14 @@ func (c *BindCollection) Get(nameOrID string) (*Bind, error) {
 // Update updates an existing bind.
 // It returns an error if the bind is not already present.
 func (c *BindCollection) Update(bind Bind) error {
-	if bind.Name == "" {
+	if bind.ID == "" {
 		return errIDRequired
 	}
 
 	txn := c.db.Txn(true)
 	defer txn.Abort()
 
-	err := deleteBind(txn, bind.Name)
+	err := deleteBind(txn, bind.ID)
 	if err != nil {
 		return err
 	}

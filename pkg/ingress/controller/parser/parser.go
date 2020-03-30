@@ -108,10 +108,27 @@ func (p *Parser) Build() (*ManbaState, error) {
 	}
 
 	for _, service := range parsedInfo.ServiceNameToServices {
+		svcKey := service.Namespace + "/" + service.Backend.ServiceName
+
+		service.Servers, err = p.getServiceEndpoints(service.K8SService, service.Backend.ServicePort.String())
+		if err != nil {
+			glog.Errorf("error getting endpoints for '%v' service: %v",
+				svcKey, err)
+		}
+
+		service.Servers, err = p.fillServers(service)
+		if err != nil {
+			glog.Errorf("error fill servers for '%v' service: %v",
+				svcKey, err)
+		}
+
 		state.Services = append(state.Services, service)
 	}
 
-	state.Servers, err = p.getServers(parsedInfo.ServiceNameToServices)
+	for _, svc := range state.Services {
+		state.Servers = append(state.Servers, svc.Servers...)
+	}
+
 	if err != nil {
 		return nil, errors.Wrap(err, "building servers")
 	}
@@ -121,8 +138,6 @@ func (p *Parser) Build() (*ManbaState, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "overriding ManbaIngress values")
 	}
-
-	state.Servers = p.fillServers(state)
 
 	// fill api before routing
 	state.APIs = p.fillAPIs(state)
@@ -243,23 +258,6 @@ func (p *Parser) parseIngressRules(
 	}, nil
 }
 
-func (p *Parser) getServers(serviceMap map[string]Service) ([]Server, error) {
-	var servers []Server
-	var err error
-	for _, service := range serviceMap {
-		svcKey := service.Namespace + "/" + service.Backend.ServiceName
-
-		service.Servers, err = p.getServiceEndpoints(service.K8SService, service.Backend.ServicePort.String())
-		if err != nil {
-			glog.Errorf("error getting endpoints for '%v' service: %v",
-				svcKey, err)
-		}
-
-		servers = append(servers, service.Servers...)
-	}
-	return servers, nil
-}
-
 func (p *Parser) fillServersFromPods(pods []corev1.Pod, svrs []Server) ([]Server, error) {
 	// key: pod ip
 	var podMap = make(map[string]corev1.Pod, len(pods))
@@ -299,15 +297,15 @@ func (p *Parser) fillOverrides(state ManbaState) error {
 			overrideAPI(&state.Services[i].APIs[j], manbaIngress)
 		}
 		// Servers
-		for j := 0; j < len(state.Servers); j++ {
-			pods, err := p.getPodsFromService(state.Services[i])
-			if err == nil {
-				overrideServer(&state.Servers[j], pods)
-			} else {
-				glog.Error(errors.Wrapf(err, "fetching Pods from services '%v' in namespace '%v'",
-					state.Services[i].K8SService.Name, state.Services[i].Namespace))
-			}
-		}
+		// for j := 0; j < len(state.Servers); j++ {
+		// 	pods, err := p.getPodsFromService(state.Services[i])
+		// 	if err == nil {
+		// 		overrideServer(&state.Servers[j], pods)
+		// 	} else {
+		// 		glog.Error(errors.Wrapf(err, "fetching Pods from services '%v' in namespace '%v'",
+		// 			state.Services[i].K8SService.Name, state.Services[i].Namespace))
+		// 	}
+		// }
 
 	}
 	return nil
@@ -321,12 +319,20 @@ func (p *Parser) fillClusterByManbaIngress(service *Service, manbaIngress *confi
 	// s := manbaIngress.Proxy
 }
 
-func (p *Parser) fillServers(state ManbaState) []Server {
-	var res []Server
-	for _, cls := range state.Services {
-		res = append(res, cls.Servers...)
+func (p *Parser) fillServers(services ...Service) ([]Server, error) {
+	var servers []Server
+	for _, svc := range services {
+		pods, err := p.store.GetPodsForService(svc.K8SService.Namespace, svc.K8SService.Name)
+		if err != nil {
+			return nil, errors.Wrapf(err, "get pods for service failed, namespace: <%s>, name: <%s>", svc.K8SService.Namespace, svc.K8SService.Name)
+		}
+		svrs, err := p.fillServersFromPods(pods, svc.Servers)
+		if err != nil {
+			return nil, errors.Wrapf(err, "fill pods from service failed, namespace: <%s>, name: <%s>", svc.K8SService.Namespace, svc.K8SService.Name)
+		}
+		servers = append(servers, svrs...)
 	}
-	return res
+	return servers, nil
 }
 
 func (p *Parser) fillAPIs(state ManbaState) []API {

@@ -91,31 +91,45 @@ func (m *ManbaController) onUpdate(p *parser.ManbaState) error {
 func (m *ManbaController) toStable(s *parser.ManbaState) *dump.ManbaRawState {
 	var ms dump.ManbaRawState
 	for _, api := range s.APIs {
-		ms.APIs = append(ms.APIs, &api.API)
+		a := api.API
+		ms.APIs = append(ms.APIs, &a)
 	}
+	// fmt.Printf("dsdsdsdsdsdsd: %+v\n ", ms.APIs)
+
 	sort.SliceStable(ms.APIs, func(i, j int) bool {
 		return ms.APIs[i].Name < ms.APIs[j].Name
 	})
 
 	for _, server := range s.Servers {
-		ms.Servers = append(ms.Servers, &server.Server)
+		svr := server.Server
+		// fmt.Printf("ababsbababababa: %+v\n ", server.Server)
+		ms.Servers = append(ms.Servers, &svr)
 	}
+
 	sort.SliceStable(ms.Servers, func(i, j int) bool {
 		return ms.Servers[i].Addr < ms.Servers[j].Addr
 	})
 
 	for _, routing := range s.Routings {
-		ms.Routings = append(ms.Routings, &routing.Routing)
+		r := routing.Routing
+		ms.Routings = append(ms.Routings, &r)
 	}
 	sort.SliceStable(ms.Routings, func(i, j int) bool {
 		return ms.Routings[i].Name < ms.Routings[j].Name
 	})
 
 	for _, svc := range s.Services {
-		ms.Clusters = append(ms.Clusters, &svc.Cluster)
+		c := svc.Cluster
+		ms.Clusters = append(ms.Clusters, &c)
+		if c.ID == 0 {
+			continue
+		}
 		for _, svr := range svc.Servers {
+			if svr.Server.ID == 0 {
+				continue
+			}
 			ms.Binds = append(ms.Binds, &metapb.Bind{
-				ClusterID: svc.Cluster.ID,
+				ClusterID: c.ID,
 				ServerID:  svr.Server.ID,
 			})
 		}
@@ -124,18 +138,22 @@ func (m *ManbaController) toStable(s *parser.ManbaState) *dump.ManbaRawState {
 	sort.SliceStable(ms.Clusters, func(i, j int) bool {
 		return ms.Clusters[i].Name < ms.Clusters[j].Name
 	})
+
 	sort.SliceStable(ms.Binds, func(i, j int) bool {
 		return ms.Binds[i].ClusterID < ms.Binds[j].ClusterID && ms.Binds[i].ServerID < ms.Binds[j].ServerID
 	})
+
 	return &ms
 }
 
 // setTargetsIDs gets their id from the existing state in manba and fill it into k8s state
 // p: Used to obtain the relationship between various resources
 func (m *ManbaController) setTargetsIDs(p *parser.ManbaState, target *dump.ManbaRawState, current *state.ManbaState) error {
+	serverAddrIDsMap := make(map[string]uint64, len(target.Servers))
 	for _, server := range target.Servers {
-		if server.ID == 0 {
-			s, err := current.Servers.Get(server.Addr)
+		if server.GetID() == 0 {
+			s, err := current.Servers.Get(server.GetAddr())
+
 			if err == state.ErrNotFound {
 				server.ID = utils.SnowID()
 			} else if err != nil {
@@ -144,10 +162,27 @@ func (m *ManbaController) setTargetsIDs(p *parser.ManbaState, target *dump.Manba
 				server.ID = s.GetID()
 			}
 		}
+		serverAddrIDsMap[server.GetAddr()] = server.GetID()
 	}
+
+	getServerIDsByCluster := func(cluster *metapb.Cluster) []uint64 {
+		var res []uint64
+		for _, svc := range p.Services {
+			if svc.Cluster.GetName() == cluster.GetName() {
+				for _, svr := range svc.Servers {
+					res = append(res, serverAddrIDsMap[svr.GetAddr()])
+				}
+
+				return res
+			}
+		}
+
+		return res
+	}
+
 	for _, cluster := range target.Clusters {
-		if cluster.ID == 0 {
-			c, err := current.Clusters.Get(cluster.Name)
+		if cluster.GetID() == 0 {
+			c, err := current.Clusters.Get(cluster.GetName())
 			if err == state.ErrNotFound {
 				cluster.ID = utils.SnowID()
 			} else if err != nil {
@@ -155,6 +190,14 @@ func (m *ManbaController) setTargetsIDs(p *parser.ManbaState, target *dump.Manba
 			} else {
 				cluster.ID = c.GetID()
 			}
+		}
+
+		// add bind
+		for _, svrID := range getServerIDsByCluster(cluster) {
+			target.Binds = append(target.Binds, &metapb.Bind{
+				ClusterID: cluster.GetID(),
+				ServerID:  svrID,
+			})
 		}
 	}
 

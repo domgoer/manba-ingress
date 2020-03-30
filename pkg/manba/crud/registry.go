@@ -142,7 +142,7 @@ func (r *Registry) Do(kind Kind, op Op, arg Arg) (Arg, error) {
 	}
 
 	if err != nil {
-		return nil, errors.Wrapf(err, "%v failed", op)
+		return nil, errors.Wrapf(err, "%v failed %v", op, arg)
 	}
 	return res, nil
 }

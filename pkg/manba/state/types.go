@@ -120,15 +120,15 @@ func (c *API) Equal(c2 *API) bool {
 // Bind represents a bind in Manba.
 // It adds some helper methods along with Metadata to the original API object.
 type Bind struct {
-	Name string
+	ID string
 	metapb.Bind
 	Metadata
 }
 
 // Identifier returns cluster_id-server_id
 func (c *Bind) Identifier() string {
-	if c.Name != "" {
-		return c.Name
+	if c.ID != "" {
+		return c.ID
 	}
 	return fmt.Sprintf("%d-%d", c.ClusterID, c.ServerID)
 }

@@ -11,5 +11,5 @@ var (
 // SnowID returns random id
 func SnowID() uint64 {
 	id, _ := snow.NextID()
-	return id / 2000000
+	return id % 20000000
 }
