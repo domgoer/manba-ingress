@@ -68,8 +68,7 @@ func (sc *Syncer) createUpdateServers() error {
 }
 
 func (sc *Syncer) createUpdateServer(server *state.Server) (*crud.Event, error) {
-	manbaServer := state.DeepCopyManbaServer(server)
-	newServer := &state.Server{Server: *manbaServer}
+	newServer := server.DeepCopy()
 
 	current, err := sc.currentState.Servers.Get(newServer.Identifier())
 	if err == state.ErrNotFound {
@@ -77,7 +76,7 @@ func (sc *Syncer) createUpdateServer(server *state.Server) (*crud.Event, error) 
 		return &crud.Event{
 			Op:   crud.Create,
 			Kind: serverKind,
-			Obj:  newServer,
+			Obj:  &newServer,
 		}, nil
 	}
 	if err != nil {
@@ -86,11 +85,11 @@ func (sc *Syncer) createUpdateServer(server *state.Server) (*crud.Event, error) 
 
 	// found server, check equal
 
-	if !state.CompareServer(current, newServer) {
+	if !state.CompareServer(current, &newServer) {
 		return &crud.Event{
 			Op:     crud.Update,
 			Kind:   serverKind,
-			Obj:    newServer,
+			Obj:    &newServer,
 			OldObj: current,
 		}, nil
 	}

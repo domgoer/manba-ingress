@@ -16,6 +16,7 @@ package controller
 import (
 	"crypto/sha256"
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"sort"
 
@@ -45,6 +46,7 @@ func (m *ManbaController) OnUpdate(state *parser.ManbaState) error {
 		glog.Info("no configuration change, skipping sync to Manba")
 		return nil
 	}
+
 	err = m.onUpdate(state)
 	if err == nil {
 		glog.Info("successfully synced configuration to Manba")
@@ -150,6 +152,8 @@ func (m *ManbaController) toStable(s *parser.ManbaState) *dump.ManbaRawState {
 // p: Used to obtain the relationship between various resources
 func (m *ManbaController) setTargetsIDs(p *parser.ManbaState, target *dump.ManbaRawState, current *state.ManbaState) error {
 	serverAddrIDsMap := make(map[string]uint64, len(target.Servers))
+	fmt.Println(012)
+
 	for _, server := range target.Servers {
 		if server.GetID() == 0 {
 			s, err := current.Servers.Get(server.GetAddr())
@@ -164,6 +168,8 @@ func (m *ManbaController) setTargetsIDs(p *parser.ManbaState, target *dump.Manba
 		}
 		serverAddrIDsMap[server.GetAddr()] = server.GetID()
 	}
+
+	fmt.Println(123)
 
 	getServerIDsByCluster := func(cluster *metapb.Cluster) []uint64 {
 		var res []uint64
@@ -200,6 +206,7 @@ func (m *ManbaController) setTargetsIDs(p *parser.ManbaState, target *dump.Manba
 			})
 		}
 	}
+	fmt.Println(234)
 
 	for _, routing := range target.Routings {
 		if routing.ID == 0 {
@@ -212,8 +219,10 @@ func (m *ManbaController) setTargetsIDs(p *parser.ManbaState, target *dump.Manba
 				routing.ID = r.GetID()
 			}
 		}
-
 	}
+
+	fmt.Println(345)
+
 	for _, api := range target.APIs {
 		if api.GetID() == 0 {
 			a, err := current.APIs.Get(api.Name)
@@ -226,6 +235,7 @@ func (m *ManbaController) setTargetsIDs(p *parser.ManbaState, target *dump.Manba
 			}
 		}
 	}
+	fmt.Println(567)
 
 	return nil
 }

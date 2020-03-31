@@ -80,7 +80,7 @@ func (c *Routing) Equal(c2 *Routing) bool {
 // Server represents a server in Manba.
 // It adds some helper methods along with Metadata to the original Server object.
 type Server struct {
-	metapb.Server
+	metapb.Server `yaml:",inline"`
 	Metadata
 }
 
@@ -95,6 +95,20 @@ func (c *Server) Identifier() string {
 // Equal returns true if c and c2 are equal.
 func (c *Server) Equal(c2 *Server) bool {
 	return reflect.DeepEqual(c, c2)
+}
+
+// DeepCopy server
+func (c *Server) DeepCopy() Server {
+	var res Server
+	res.Metadata = Metadata{
+		meta: make(map[string]interface{}),
+	}
+	b, _ := c.Server.Marshal()
+	res.Server.Unmarshal(b)
+	for k, v := range c.Metadata.meta {
+		res.Metadata.meta[k] = v
+	}
+	return res
 }
 
 // API represents a api in Manba.

@@ -3,7 +3,6 @@ package state
 import (
 	"reflect"
 
-	"github.com/fagongzi/gateway/pkg/pb/metapb"
 	memdb "github.com/hashicorp/go-memdb"
 )
 
@@ -20,7 +19,7 @@ var serverTableSchema = &memdb.TableSchema{
 		"id": {
 			Name:    "id",
 			Unique:  true,
-			Indexer: &memdb.StringFieldIndex{Field: "ID"},
+			Indexer: &memdb.UintFieldIndex{Field: "ID"},
 		},
 		"addr": {
 			Name:         "addr",
@@ -74,7 +73,8 @@ func getServer(txn *memdb.Txn, searches ...string) (*Server, error) {
 		if !ok {
 			panic(unexpectedType)
 		}
-		return &Server{Server: *DeepCopyManbaServer(server)}, nil
+		dc := server.DeepCopy()
+		return &dc, nil
 	}
 	return nil, ErrNotFound
 }
@@ -162,25 +162,19 @@ func (c *ServerCollection) GetAll() ([]*Server, error) {
 		if !ok {
 			panic(unexpectedType)
 		}
-		res = append(res, &Server{Server: *DeepCopyManbaServer(s)})
+		dc := s.DeepCopy()
+		res = append(res, &dc)
 	}
 	txn.Commit()
 	return res, nil
 }
 
-// DeepCopyManbaServer returns new server deep cloned by this function
-func DeepCopyManbaServer(s *Server) *metapb.Server {
-	res := new(metapb.Server)
-	deepCopyManbaStruct(s, res)
-	return res
-}
-
 // CompareServer checks two manba apis whether deep equal
 func CompareServer(r1, r2 *Server) bool {
-	d1 := DeepCopyManbaServer(r1)
-	d2 := DeepCopyManbaServer(r2)
+	d1 := r1.DeepCopy()
+	d2 := r2.DeepCopy()
 
 	d1.XXX_unrecognized = nil
 	d2.XXX_unrecognized = nil
-	return reflect.DeepEqual(&r1.Server, &r2.Server)
+	return reflect.DeepEqual(&d1.Server, &d2.Server)
 }

@@ -20,7 +20,7 @@ var clusterTableSchema = &memdb.TableSchema{
 		"id": {
 			Name:    "id",
 			Unique:  true,
-			Indexer: &memdb.StringFieldIndex{Field: "ID"},
+			Indexer: &memdb.UintFieldIndex{Field: "ID"},
 		},
 		"name": {
 			Name:         "name",

@@ -151,6 +151,7 @@ func (m *ManbaController) syncIngress(interface{}) error {
 	if err != nil {
 		return errors.Wrap(err, "error building manba state")
 	}
+
 	err = m.OnUpdate(state)
 	if err != nil {
 		glog.Errorf("unexpected failure updating Manba configuration: \n%v", err)

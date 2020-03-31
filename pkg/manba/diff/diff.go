@@ -148,7 +148,7 @@ func (sc *Syncer) createUpdate() error {
 		sc.createUpdateClusters,
 		sc.createUpdateBinds,
 		sc.createUpdateAPIs,
-		sc.createUpdateBinds,
+		sc.createUpdateRoutings,
 	}
 
 	for _, createUpdate := range createUpdateList {
