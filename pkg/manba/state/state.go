@@ -3,8 +3,6 @@ package state
 // store the state of all components
 
 import (
-	"fmt"
-
 	"github.com/domgoer/manba-ingress/pkg/manba/dump"
 	memdb "github.com/hashicorp/go-memdb"
 	"github.com/pkg/errors"
@@ -82,13 +80,10 @@ func Get(raw *dump.ManbaRawState) (*ManbaState, error) {
 
 	for _, s := range raw.Servers {
 		err := state.Servers.Add(Server{Server: *s})
-		if err != nil {
+		if err != nil && err != ErrAlreadyExists {
 			return nil, errors.Wrap(err, "add server to state")
 		}
 	}
-
-	// fmt.Println("dddddddddddddd")
-	fmt.Println(state.Servers.GetAll())
 
 	for _, b := range raw.Binds {
 		err := state.Binds.Add(Bind{Bind: *b})

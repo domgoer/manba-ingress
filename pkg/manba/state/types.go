@@ -41,6 +41,7 @@ func (m *Metadata) GetMeta(key string) interface{} {
 // It adds some helper methods along with Metadata to the original Cluster object.
 type Cluster struct {
 	metapb.Cluster
+	idStr string
 	Metadata
 }
 
@@ -61,6 +62,7 @@ func (c *Cluster) Equal(c2 *Cluster) bool {
 // It adds some helper methods along with Metadata to the original Routing object.
 type Routing struct {
 	metapb.Routing
+	idStr string
 	Metadata
 }
 
@@ -81,6 +83,7 @@ func (c *Routing) Equal(c2 *Routing) bool {
 // It adds some helper methods along with Metadata to the original Server object.
 type Server struct {
 	metapb.Server `yaml:",inline"`
+	idStr         string
 	Metadata
 }
 
@@ -115,6 +118,7 @@ func (c *Server) DeepCopy() Server {
 // It adds some helper methods along with Metadata to the original API object.
 type API struct {
 	metapb.API
+	idStr string
 	Metadata
 }
 

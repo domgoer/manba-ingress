@@ -16,7 +16,6 @@ package controller
 import (
 	"crypto/sha256"
 	"encoding/json"
-	"fmt"
 	"reflect"
 	"sort"
 
@@ -26,6 +25,7 @@ import (
 	"github.com/domgoer/manba-ingress/pkg/manba/solver"
 	"github.com/domgoer/manba-ingress/pkg/manba/state"
 	"github.com/domgoer/manba-ingress/pkg/utils"
+	"github.com/fagongzi/gateway/pkg/pb"
 	"github.com/fagongzi/gateway/pkg/pb/metapb"
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
@@ -74,6 +74,8 @@ func (m *ManbaController) onUpdate(p *parser.ManbaState) error {
 		return errors.Wrap(err, "set target IDs")
 	}
 
+	targetRaw = m.filterInvalidations(targetRaw)
+
 	targetState, err := state.Get(targetRaw)
 	if err != nil {
 		return errors.Wrap(err, "get target state")
@@ -96,7 +98,6 @@ func (m *ManbaController) toStable(s *parser.ManbaState) *dump.ManbaRawState {
 		a := api.API
 		ms.APIs = append(ms.APIs, &a)
 	}
-	// fmt.Printf("dsdsdsdsdsdsd: %+v\n ", ms.APIs)
 
 	sort.SliceStable(ms.APIs, func(i, j int) bool {
 		return ms.APIs[i].Name < ms.APIs[j].Name
@@ -104,7 +105,6 @@ func (m *ManbaController) toStable(s *parser.ManbaState) *dump.ManbaRawState {
 
 	for _, server := range s.Servers {
 		svr := server.Server
-		// fmt.Printf("ababsbababababa: %+v\n ", server.Server)
 		ms.Servers = append(ms.Servers, &svr)
 	}
 
@@ -152,7 +152,6 @@ func (m *ManbaController) toStable(s *parser.ManbaState) *dump.ManbaRawState {
 // p: Used to obtain the relationship between various resources
 func (m *ManbaController) setTargetsIDs(p *parser.ManbaState, target *dump.ManbaRawState, current *state.ManbaState) error {
 	serverAddrIDsMap := make(map[string]uint64, len(target.Servers))
-	fmt.Println(012)
 
 	for _, server := range target.Servers {
 		if server.GetID() == 0 {
@@ -168,8 +167,6 @@ func (m *ManbaController) setTargetsIDs(p *parser.ManbaState, target *dump.Manba
 		}
 		serverAddrIDsMap[server.GetAddr()] = server.GetID()
 	}
-
-	fmt.Println(123)
 
 	getServerIDsByCluster := func(cluster *metapb.Cluster) []uint64 {
 		var res []uint64
@@ -206,7 +203,6 @@ func (m *ManbaController) setTargetsIDs(p *parser.ManbaState, target *dump.Manba
 			})
 		}
 	}
-	fmt.Println(234)
 
 	for _, routing := range target.Routings {
 		if routing.ID == 0 {
@@ -221,8 +217,6 @@ func (m *ManbaController) setTargetsIDs(p *parser.ManbaState, target *dump.Manba
 		}
 	}
 
-	fmt.Println(345)
-
 	for _, api := range target.APIs {
 		if api.GetID() == 0 {
 			a, err := current.APIs.Get(api.Name)
@@ -235,7 +229,55 @@ func (m *ManbaController) setTargetsIDs(p *parser.ManbaState, target *dump.Manba
 			}
 		}
 	}
-	fmt.Println(567)
 
 	return nil
+}
+
+func (m *ManbaController) filterInvalidations(raw *dump.ManbaRawState) *dump.ManbaRawState {
+	res := new(dump.ManbaRawState)
+	validClusters := make(map[uint64]bool, len(raw.Clusters))
+	validServers := make(map[uint64]bool, len(raw.Servers))
+
+	for _, cluster := range raw.Clusters {
+		if err := pb.ValidateCluster(cluster); err != nil {
+			glog.Warningf("cluster <%v> is invalid: %v", cluster, err)
+			continue
+		}
+		validClusters[cluster.GetID()] = true
+		res.Clusters = append(res.Clusters, cluster)
+	}
+
+	for _, server := range raw.Servers {
+		if err := pb.ValidateServer(server); err != nil {
+			glog.Warningf("server <%v> is invalid: %v", server, err)
+			continue
+		}
+		validServers[server.GetID()] = true
+		res.Servers = append(res.Servers, server)
+	}
+
+	for _, bind := range raw.Binds {
+		if validServers[bind.GetServerID()] && validClusters[bind.GetClusterID()] {
+			res.Binds = append(res.Binds, bind)
+		} else {
+			glog.Warningf("cluster: %d, server: %d", bind.GetClusterID(), bind.GetServerID())
+		}
+	}
+
+	for _, api := range raw.APIs {
+		if err := pb.ValidateAPI(api); err != nil {
+			glog.Warningf("api <%v> is invalid: %v", api, err)
+			continue
+		}
+		res.APIs = append(res.APIs, api)
+	}
+
+	for _, routing := range raw.Routings {
+		if err := pb.ValidateRouting(routing); err != nil {
+			glog.Warningf("routing <%v> is invalid: %v", routing, err)
+			continue
+		}
+		res.Routings = append(res.Routings, routing)
+	}
+	return res
 }

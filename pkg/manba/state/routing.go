@@ -20,7 +20,7 @@ var routingTableSchema = &memdb.TableSchema{
 		"id": {
 			Name:    "id",
 			Unique:  true,
-			Indexer: &memdb.UintFieldIndex{Field: "ID"},
+			Indexer: &memdb.StringFieldIndex{Field: "idStr"},
 		},
 		"name": {
 			Name:         "name",
@@ -39,6 +39,7 @@ func (c *RoutingCollection) Add(routing Routing) error {
 	if id == "" {
 		return errIDRequired
 	}
+	routing.idStr = id
 	txn := c.db.Txn(true)
 	defer txn.Abort()
 

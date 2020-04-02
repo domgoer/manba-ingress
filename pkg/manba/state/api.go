@@ -20,7 +20,7 @@ var apiTableSchema = &memdb.TableSchema{
 		"id": {
 			Name:    "id",
 			Unique:  true,
-			Indexer: &memdb.UintFieldIndex{Field: "ID"},
+			Indexer: &memdb.StringFieldIndex{Field: "idStr"},
 		},
 		"name": {
 			Name:         "name",
@@ -39,6 +39,8 @@ func (c *APICollection) Add(api API) error {
 	if id == "" {
 		return errIDRequired
 	}
+	// set id
+	api.idStr = id
 	txn := c.db.Txn(true)
 	defer txn.Abort()
 

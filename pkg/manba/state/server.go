@@ -19,7 +19,7 @@ var serverTableSchema = &memdb.TableSchema{
 		"id": {
 			Name:    "id",
 			Unique:  true,
-			Indexer: &memdb.UintFieldIndex{Field: "ID"},
+			Indexer: &memdb.StringFieldIndex{Field: "idStr"},
 		},
 		"addr": {
 			Name:         "addr",
@@ -38,6 +38,7 @@ func (c *ServerCollection) Add(server Server) error {
 	if id == "" {
 		return errIDRequired
 	}
+	server.idStr = id
 	txn := c.db.Txn(true)
 	defer txn.Abort()
 

@@ -20,7 +20,7 @@ var clusterTableSchema = &memdb.TableSchema{
 		"id": {
 			Name:    "id",
 			Unique:  true,
-			Indexer: &memdb.UintFieldIndex{Field: "ID"},
+			Indexer: &memdb.StringFieldIndex{Field: "idStr"},
 		},
 		"name": {
 			Name:         "name",
@@ -39,6 +39,7 @@ func (c *ClusterCollection) Add(cluster Cluster) error {
 	if id == "" {
 		return errIDRequired
 	}
+	cluster.idStr = id
 	txn := c.db.Txn(true)
 	defer txn.Abort()
 

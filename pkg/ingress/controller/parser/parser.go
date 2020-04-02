@@ -393,6 +393,9 @@ func (p *Parser) getServiceEndpoints(svc corev1.Service,
 			svcKey)
 	}
 	for _, endpoint := range endpoints {
+		if endpoint.Port != backendPort {
+			continue
+		}
 		server := Server{
 			Server: metapb.Server{
 				Addr: endpoint.String(),
