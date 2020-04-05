@@ -96,7 +96,18 @@ func (m *ManbaController) toStable(s *parser.ManbaState) *dump.ManbaRawState {
 	var ms dump.ManbaRawState
 	for _, api := range s.APIs {
 		a := api.API
-		ms.APIs = append(ms.APIs, &a)
+		var proxies []dump.Proxy
+		for _, p := range api.Proxies {
+			proxies = append(proxies, dump.Proxy{
+				APIName:      a.GetName(),
+				ClusterName:  p.ClusterName,
+				DispatchNode: &p.DispatchNode,
+			})
+		}
+		ms.APIs = append(ms.APIs, &dump.API{
+			API:     &a,
+			Proxies: proxies,
+		})
 	}
 
 	sort.SliceStable(ms.APIs, func(i, j int) bool {
@@ -105,7 +116,9 @@ func (m *ManbaController) toStable(s *parser.ManbaState) *dump.ManbaRawState {
 
 	for _, server := range s.Servers {
 		svr := server.Server
-		ms.Servers = append(ms.Servers, &svr)
+		ms.Servers = append(ms.Servers, &dump.Server{
+			Server: &svr,
+		})
 	}
 
 	sort.SliceStable(ms.Servers, func(i, j int) bool {
@@ -114,7 +127,11 @@ func (m *ManbaController) toStable(s *parser.ManbaState) *dump.ManbaRawState {
 
 	for _, routing := range s.Routings {
 		r := routing.Routing
-		ms.Routings = append(ms.Routings, &r)
+		ms.Routings = append(ms.Routings, &dump.Routing{
+			Routing: &r,
+			APIName: routing.APIName,
+			ClusterName: routing.ClusterName,
+		})
 	}
 	sort.SliceStable(ms.Routings, func(i, j int) bool {
 		return ms.Routings[i].Name < ms.Routings[j].Name
@@ -122,7 +139,9 @@ func (m *ManbaController) toStable(s *parser.ManbaState) *dump.ManbaRawState {
 
 	for _, svc := range s.Services {
 		c := svc.Cluster
-		ms.Clusters = append(ms.Clusters, &c)
+		ms.Clusters = append(ms.Clusters, &dump.Cluster{
+			Cluster: &c,
+		})
 		if c.ID == 0 {
 			continue
 		}
@@ -130,9 +149,13 @@ func (m *ManbaController) toStable(s *parser.ManbaState) *dump.ManbaRawState {
 			if svr.Server.ID == 0 {
 				continue
 			}
-			ms.Binds = append(ms.Binds, &metapb.Bind{
-				ClusterID: c.ID,
-				ServerID:  svr.Server.ID,
+			ms.Binds = append(ms.Binds, &dump.Bind{
+				ClusterName: c.GetName(),
+				ServerAddr: svr.GetAddr(),
+				Bind: &metapb.Bind{
+					ClusterID: c.ID,
+					ServerID:  svr.Server.ID,
+				},
 			})
 		}
 	}
@@ -152,6 +175,7 @@ func (m *ManbaController) toStable(s *parser.ManbaState) *dump.ManbaRawState {
 // p: Used to obtain the relationship between various resources
 func (m *ManbaController) setTargetsIDs(p *parser.ManbaState, target *dump.ManbaRawState, current *state.ManbaState) error {
 	serverAddrIDsMap := make(map[string]uint64, len(target.Servers))
+	clusterNameIDsMap := make(map[string]uint64, len(target.Clusters))
 
 	for _, server := range target.Servers {
 		if server.GetID() == 0 {
@@ -195,25 +219,14 @@ func (m *ManbaController) setTargetsIDs(p *parser.ManbaState, target *dump.Manba
 			}
 		}
 
+		clusterNameIDsMap[cluster.GetName()] = cluster.GetID()
+
 		// add bind
 		for _, svrID := range getServerIDsByCluster(cluster) {
 			target.Binds = append(target.Binds, &metapb.Bind{
 				ClusterID: cluster.GetID(),
 				ServerID:  svrID,
 			})
-		}
-	}
-
-	for _, routing := range target.Routings {
-		if routing.ID == 0 {
-			r, err := current.Routings.Get(routing.Name)
-			if err == state.ErrNotFound {
-				routing.ID = utils.SnowID()
-			} else if err != nil {
-				return err
-			} else {
-				routing.ID = r.GetID()
-			}
 		}
 	}
 
@@ -226,6 +239,33 @@ func (m *ManbaController) setTargetsIDs(p *parser.ManbaState, target *dump.Manba
 				return err
 			} else {
 				api.ID = a.GetID()
+			}
+		}
+
+		// TODO: improve, find proxy in parser.ManbaState
+		for _, node := range api.Nodes {
+			if node.GetClusterID() != 0 {
+				continue
+			}
+			for _, a := range p.APIs {
+				if a.Name != api.Name {
+					continue
+				}
+
+			}
+		}
+
+	}
+
+	for _, routing := range target.Routings {
+		if routing.ID == 0 {
+			r, err := current.Routings.Get(routing.Name)
+			if err == state.ErrNotFound {
+				routing.ID = utils.SnowID()
+			} else if err != nil {
+				return err
+			} else {
+				routing.ID = r.GetID()
 			}
 		}
 	}

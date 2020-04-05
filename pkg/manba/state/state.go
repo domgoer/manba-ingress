@@ -58,35 +58,35 @@ func Get(raw *dump.ManbaRawState) (*ManbaState, error) {
 	}
 
 	for _, a := range raw.APIs {
-		err := state.APIs.Add(API{API: *a})
+		err := state.APIs.Add(API{API: *a.API})
 		if err != nil {
 			return nil, errors.Wrap(err, "add api to state")
 		}
 	}
 
 	for _, r := range raw.Routings {
-		err := state.Routings.Add(Routing{Routing: *r})
+		err := state.Routings.Add(Routing{Routing: *r.Routing})
 		if err != nil {
 			return nil, errors.Wrap(err, "add routing to state")
 		}
 	}
 
 	for _, c := range raw.Clusters {
-		err := state.Clusters.Add(Cluster{Cluster: *c})
+		err := state.Clusters.Add(Cluster{Cluster: *c.Cluster})
 		if err != nil {
 			return nil, errors.Wrap(err, "add cluster to state")
 		}
 	}
 
 	for _, s := range raw.Servers {
-		err := state.Servers.Add(Server{Server: *s})
+		err := state.Servers.Add(Server{Server: *s.Server})
 		if err != nil && err != ErrAlreadyExists {
 			return nil, errors.Wrap(err, "add server to state")
 		}
 	}
 
 	for _, b := range raw.Binds {
-		err := state.Binds.Add(Bind{Bind: *b})
+		err := state.Binds.Add(Bind{Bind: *b.Bind})
 		if err != nil {
 			return nil, errors.Wrap(err, "add bind to state")
 		}

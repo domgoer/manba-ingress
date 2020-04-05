@@ -23,6 +23,8 @@ import (
 // Routing represents a Manba Routing and holds a reference to the Ingress
 // rule.
 type Routing struct {
+	APIName string
+	ClusterName string
 	metapb.Routing
 }
 
@@ -50,12 +52,19 @@ type API struct {
 	metapb.API
 
 	Routings []Routing
+	Proxies  []Proxy
 	Ingress  networkingv1beta1.Ingress
 }
 
 // Plugin implements manba Plugin
 type Plugin struct {
 	// metapb.Plugin
+}
+
+// Proxy implements manba DispatchNode
+type Proxy struct {
+	ClusterName string
+	metapb.DispatchNode
 }
 
 // Parser parses Kubernetes CRDs and Ingress rules and generates a
@@ -211,6 +220,11 @@ func (p *Parser) parseIngressRules(
 					}
 				}
 
+				proxy := Proxy{
+					ClusterName: service.GetName(),
+				}
+				i.Proxies = append(i.Proxies, proxy)
+
 				service.APIs = append(service.APIs, i)
 				serviceNameToServices[serviceName] = service
 			}
@@ -248,6 +262,11 @@ func (p *Parser) parseIngressRules(
 			},
 			Ingress: ingress,
 		}
+
+		proxy := Proxy{
+			ClusterName: service.GetName(),
+		}
+		i.Proxies = append(i.Proxies, proxy)
 
 		service.APIs = append(service.APIs, i)
 		serviceNameToServices[serviceName] = service
