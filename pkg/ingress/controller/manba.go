@@ -139,33 +139,27 @@ func (m *ManbaController) toStable(s *parser.ManbaState) *dump.ManbaRawState {
 
 	for _, svc := range s.Services {
 		c := svc.Cluster
+
 		ms.Clusters = append(ms.Clusters, &dump.Cluster{
 			Cluster: &c,
 		})
-		if c.ID == 0 {
-			continue
-		}
 		for _, svr := range svc.Servers {
-			if svr.Server.ID == 0 {
-				continue
-			}
+			// Add binds
 			ms.Binds = append(ms.Binds, &dump.Bind{
 				ClusterName: c.GetName(),
 				ServerAddr:  svr.GetAddr(),
-				Bind: &metapb.Bind{
-					ClusterID: c.ID,
-					ServerID:  svr.Server.ID,
-				},
 			})
 		}
 	}
+
+
 
 	sort.SliceStable(ms.Clusters, func(i, j int) bool {
 		return ms.Clusters[i].Name < ms.Clusters[j].Name
 	})
 
 	sort.SliceStable(ms.Binds, func(i, j int) bool {
-		return ms.Binds[i].ClusterID < ms.Binds[j].ClusterID && ms.Binds[i].ServerID < ms.Binds[j].ServerID
+		return ms.Binds[i].ClusterName < ms.Binds[j].ClusterName && ms.Binds[i].ServerAddr < ms.Binds[j].ServerAddr
 	})
 
 	return &ms
@@ -192,21 +186,6 @@ func (m *ManbaController) setTargetsIDs(p *parser.ManbaState, target *dump.Manba
 		serverAddrIDsMap[server.GetAddr()] = server.GetID()
 	}
 
-	getServerIDsByCluster := func(clusterName string) []uint64 {
-		var res []uint64
-		for _, svc := range p.Services {
-			if svc.Cluster.GetName() == clusterName {
-				for _, svr := range svc.Servers {
-					res = append(res, serverAddrIDsMap[svr.GetAddr()])
-				}
-
-				return res
-			}
-		}
-
-		return res
-	}
-
 	for _, cluster := range target.Clusters {
 		if cluster.GetID() == 0 {
 			c, err := current.Clusters.Get(cluster.GetName())
@@ -228,14 +207,19 @@ func (m *ManbaController) setTargetsIDs(p *parser.ManbaState, target *dump.Manba
 			glog.Warningf("not found cluster <%s> in bind", bind.ClusterName)
 			continue
 		}
-		// add bind
-		for _, svrID := range getServerIDsByCluster(bind.ClusterName) {
-			bind.Bind = &metapb.Bind{
-				ClusterID: clusterID,
-				ServerID:  svrID,
-			}
+
+		serverID , ok := serverAddrIDsMap[bind.ServerAddr]
+		if !ok {
+			glog.Warningf("not found server <%s> in bind",bind.ServerAddr)
+			continue
+		}
+
+		bind.Bind = &metapb.Bind{
+			ClusterID: clusterID,
+			ServerID:  serverID,
 		}
 	}
+
 
 	for _, api := range target.APIs {
 		if api.GetID() == 0 {
