@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/fagongzi/gateway/pkg/pb/metapb"
 	memdb "github.com/hashicorp/go-memdb"
 )
 
@@ -21,7 +20,7 @@ var bindTableSchema = &memdb.TableSchema{
 		"id": {
 			Name:    "id",
 			Unique:  true,
-			Indexer: &memdb.StringFieldIndex{Field: "ID"},
+			Indexer: &memdb.StringFieldIndex{Field: "id"},
 		},
 		all: allIndex,
 	},
@@ -36,10 +35,10 @@ func (c *BindCollection) Add(bind Bind) error {
 	txn := c.db.Txn(true)
 	defer txn.Abort()
 
-	bind.ID = fmt.Sprintf("%d-%d", bind.ClusterID, bind.ServerID)
+	bind.id = fmt.Sprintf("%d-%d", bind.ClusterID, bind.ServerID)
 
 	var searchBy []string
-	searchBy = append(searchBy, bind.ID)
+	searchBy = append(searchBy, bind.id)
 
 	_, err := getBind(txn, searchBy...)
 	if err == nil {
@@ -70,7 +69,7 @@ func getBind(txn *memdb.Txn, searches ...string) (*Bind, error) {
 		if !ok {
 			panic(unexpectedType)
 		}
-		return &Bind{Bind: *DeepCopyManbaBind(bind)}, nil
+		return bind.DeepCopy(), nil
 	}
 	return nil, ErrNotFound
 }
@@ -89,14 +88,14 @@ func (c *BindCollection) Get(nameOrID string) (*Bind, error) {
 // Update updates an existing bind.
 // It returns an error if the bind is not already present.
 func (c *BindCollection) Update(bind Bind) error {
-	if bind.ID == "" {
+	if bind.id == "" {
 		return errIDRequired
 	}
 
 	txn := c.db.Txn(true)
 	defer txn.Abort()
 
-	err := deleteBind(txn, bind.ID)
+	err := deleteBind(txn, bind.id)
 	if err != nil {
 		return err
 	}
@@ -157,23 +156,16 @@ func (c *BindCollection) GetAll() ([]*Bind, error) {
 		if !ok {
 			panic(unexpectedType)
 		}
-		res = append(res, &Bind{Bind: *DeepCopyManbaBind(s)})
+		res = append(res, s.DeepCopy())
 	}
 	txn.Commit()
 	return res, nil
 }
 
-// DeepCopyManbaBind returns new bind deep cloned by this function
-func DeepCopyManbaBind(s *Bind) *metapb.Bind {
-	res := new(metapb.Bind)
-	deepCopyManbaStruct(s, res)
-	return res
-}
-
 // CompareBind checks two manba apis whether deep equal
 func CompareBind(r1, r2 *Bind) bool {
-	d1 := DeepCopyManbaBind(r1)
-	d2 := DeepCopyManbaBind(r2)
+	d1 := r1.DeepCopy().Bind
+	d2 := r2.DeepCopy().Bind
 
 	d1.XXX_unrecognized = nil
 	d2.XXX_unrecognized = nil

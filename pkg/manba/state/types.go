@@ -180,15 +180,15 @@ func (c *API) DeepCopy() *API {
 // Bind represents a bind in Manba.
 // It adds some helper methods along with Metadata to the original API object.
 type Bind struct {
-	ID string
+	id string
 	metapb.Bind
 	Metadata
 }
 
 // Identifier returns cluster_id-server_id
 func (c *Bind) Identifier() string {
-	if c.ID != "" {
-		return c.ID
+	if c.id != "" {
+		return c.id
 	}
 	return fmt.Sprintf("%d-%d", c.ClusterID, c.ServerID)
 }
@@ -208,6 +208,7 @@ func (c *Bind) DeepCopy() *Bind {
 	for k, v := range c.Metadata.meta {
 		res.Metadata.meta[k] = v
 	}
+	res.id = c.id
 	return &res
 }
 

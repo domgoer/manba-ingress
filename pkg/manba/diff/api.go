@@ -68,8 +68,8 @@ func (sc *Syncer) createUpdateAPIs() error {
 }
 
 func (sc *Syncer) createUpdateAPI(api *state.API) (*crud.Event, error) {
-	manbaAPI := state.DeepCopyManbaAPI(api)
-	newAPI := &state.API{API: *manbaAPI}
+	manbaAPI := api.DeepCopy().API
+	newAPI := &state.API{API: manbaAPI}
 
 	current, err := sc.currentState.APIs.Get(newAPI.Identifier())
 	if err == state.ErrNotFound {

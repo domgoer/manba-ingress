@@ -152,8 +152,6 @@ func (m *ManbaController) toStable(s *parser.ManbaState) *dump.ManbaRawState {
 		}
 	}
 
-
-
 	sort.SliceStable(ms.Clusters, func(i, j int) bool {
 		return ms.Clusters[i].Name < ms.Clusters[j].Name
 	})
@@ -208,9 +206,9 @@ func (m *ManbaController) setTargetsIDs(p *parser.ManbaState, target *dump.Manba
 			continue
 		}
 
-		serverID , ok := serverAddrIDsMap[bind.ServerAddr]
+		serverID, ok := serverAddrIDsMap[bind.ServerAddr]
 		if !ok {
-			glog.Warningf("not found server <%s> in bind",bind.ServerAddr)
+			glog.Warningf("not found server <%s> in bind", bind.ServerAddr)
 			continue
 		}
 
@@ -219,7 +217,6 @@ func (m *ManbaController) setTargetsIDs(p *parser.ManbaState, target *dump.Manba
 			ServerID:  serverID,
 		}
 	}
-
 
 	for _, api := range target.APIs {
 		if api.GetID() == 0 {

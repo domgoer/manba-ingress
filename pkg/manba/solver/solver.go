@@ -49,6 +49,7 @@ func Solve(doneCh chan struct{}, syncer *diff.Syncer,
 			if err != nil {
 				return nil, err
 			}
+			glog.Infof("old: %+v, new: %+v",e.OldObj, e.Obj)
 			glog.Infof("updating <%s>, diff: <%s>, data: %+v", e.Kind, diffString, e.Obj)
 		case crud.Delete:
 			glog.Infof("deleting <%s>, data: %+v", e.Kind, e.Obj)

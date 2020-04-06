@@ -68,8 +68,8 @@ func (sc *Syncer) createUpdateClusters() error {
 }
 
 func (sc *Syncer) createUpdateCluster(cluster *state.Cluster) (*crud.Event, error) {
-	manbaCluster := state.DeepCopyManbaCluster(cluster)
-	newCluster := &state.Cluster{Cluster: *manbaCluster}
+	manbaCluster := cluster.DeepCopy().Cluster
+	newCluster := &state.Cluster{Cluster: manbaCluster}
 
 	current, err := sc.currentState.Clusters.Get(newCluster.Identifier())
 	if err == state.ErrNotFound {

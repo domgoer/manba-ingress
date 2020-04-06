@@ -68,8 +68,8 @@ func (sc *Syncer) createUpdateBinds() error {
 }
 
 func (sc *Syncer) createUpdateBind(bind *state.Bind) (*crud.Event, error) {
-	manbaBind := state.DeepCopyManbaBind(bind)
-	newBind := &state.Bind{Bind: *manbaBind}
+	manbaBind := bind.DeepCopy().Bind
+	newBind := &state.Bind{Bind: manbaBind}
 
 	current, err := sc.currentState.Binds.Get(newBind.Identifier())
 	if err == state.ErrNotFound {

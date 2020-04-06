@@ -3,7 +3,6 @@ package state
 import (
 	"reflect"
 
-	"github.com/fagongzi/gateway/pkg/pb/metapb"
 	memdb "github.com/hashicorp/go-memdb"
 )
 
@@ -75,7 +74,8 @@ func getCluster(txn *memdb.Txn, searches ...string) (*Cluster, error) {
 		if !ok {
 			panic(unexpectedType)
 		}
-		return cluster.DeepCopy(), nil
+		dp := cluster.DeepCopy()
+		return &Cluster{Cluster: dp.Cluster, idStr: dp.idStr}, nil
 	}
 	return nil, ErrNotFound
 }
@@ -164,23 +164,17 @@ func (c *ClusterCollection) GetAll() ([]*Cluster, error) {
 		if !ok {
 			panic(unexpectedType)
 		}
-		res = append(res, &Cluster{Cluster: *DeepCopyManbaCluster(s)})
+		dp := s.DeepCopy()
+		res = append(res, &Cluster{Cluster: dp.Cluster, idStr: dp.idStr})
 	}
 	txn.Commit()
 	return res, nil
 }
 
-// DeepCopyManbaCluster returns new cluster deep cloned by this function
-func DeepCopyManbaCluster(s *Cluster) *metapb.Cluster {
-	res := new(metapb.Cluster)
-	deepCopyManbaStruct(s, res)
-	return res
-}
-
 // CompareCluster checks two manba clusters whether deep equal
 func CompareCluster(r1, r2 *Cluster) bool {
-	d1 := DeepCopyManbaCluster(r1)
-	d2 := DeepCopyManbaCluster(r2)
+	d1 := r1.DeepCopy().Cluster
+	d2 := r2.DeepCopy().Cluster
 
 	d1.XXX_unrecognized = nil
 	d2.XXX_unrecognized = nil

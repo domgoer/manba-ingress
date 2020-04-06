@@ -74,8 +74,8 @@ func getServer(txn *memdb.Txn, searches ...string) (*Server, error) {
 		if !ok {
 			panic(unexpectedType)
 		}
-		dc := server.DeepCopy()
-		return dc, nil
+		dp := server.DeepCopy()
+		return &Server{Server: dp.Server, idStr: dp.idStr}, nil
 	}
 	return nil, ErrNotFound
 }
@@ -164,8 +164,8 @@ func (c *ServerCollection) GetAll() ([]*Server, error) {
 		if !ok {
 			panic(unexpectedType)
 		}
-		dc := s.DeepCopy()
-		res = append(res, dc)
+		dp := s.DeepCopy()
+		res = append(res, &Server{Server: dp.Server, idStr: dp.idStr})
 	}
 	txn.Commit()
 	return res, nil
@@ -173,10 +173,10 @@ func (c *ServerCollection) GetAll() ([]*Server, error) {
 
 // CompareServer checks two manba apis whether deep equal
 func CompareServer(r1, r2 *Server) bool {
-	d1 := r1.DeepCopy()
-	d2 := r2.DeepCopy()
+	d1 := r1.DeepCopy().Server
+	d2 := r2.DeepCopy().Server
 
 	d1.XXX_unrecognized = nil
 	d2.XXX_unrecognized = nil
-	return reflect.DeepEqual(&d1.Server, &d2.Server)
+	return reflect.DeepEqual(&d1, &d2)
 }
