@@ -58,6 +58,20 @@ func (c *Cluster) Equal(c2 *Cluster) bool {
 	return reflect.DeepEqual(c, c2)
 }
 
+// DeepCopy cluster
+func (c *Cluster) DeepCopy() *Cluster {
+	var res Cluster
+	res.Metadata = Metadata{
+		meta: make(map[string]interface{}),
+	}
+	deepCopyManbaStruct(&c.Cluster, &res.Cluster)
+	for k, v := range c.Metadata.meta {
+		res.Metadata.meta[k] = v
+	}
+	res.idStr = c.idStr
+	return &res
+}
+
 // Routing represents a routing in Manba.
 // It adds some helper methods along with Metadata to the original Routing object.
 type Routing struct {
@@ -77,6 +91,20 @@ func (c *Routing) Identifier() string {
 // Equal returns true if c and c2 are equal.
 func (c *Routing) Equal(c2 *Routing) bool {
 	return reflect.DeepEqual(c, c2)
+}
+
+// DeepCopy routing
+func (c *Routing) DeepCopy() *Routing {
+	var res Routing
+	res.Metadata = Metadata{
+		meta: make(map[string]interface{}),
+	}
+	deepCopyManbaStruct(&c.Routing, &res.Routing)
+	for k, v := range c.Metadata.meta {
+		res.Metadata.meta[k] = v
+	}
+	res.idStr = c.idStr
+	return &res
 }
 
 // Server represents a server in Manba.
@@ -101,17 +129,17 @@ func (c *Server) Equal(c2 *Server) bool {
 }
 
 // DeepCopy server
-func (c *Server) DeepCopy() Server {
+func (c *Server) DeepCopy() *Server {
 	var res Server
 	res.Metadata = Metadata{
 		meta: make(map[string]interface{}),
 	}
-	b, _ := c.Server.Marshal()
-	res.Server.Unmarshal(b)
+	deepCopyManbaStruct(&c.Server, &res.Server)
 	for k, v := range c.Metadata.meta {
 		res.Metadata.meta[k] = v
 	}
-	return res
+	res.idStr = c.idStr
+	return &res
 }
 
 // API represents a api in Manba.
@@ -135,6 +163,20 @@ func (c *API) Equal(c2 *API) bool {
 	return reflect.DeepEqual(c, c2)
 }
 
+// DeepCopy api
+func (c *API) DeepCopy() *API {
+	var res API
+	res.Metadata = Metadata{
+		meta: make(map[string]interface{}),
+	}
+	deepCopyManbaStruct(&c.API, &res.API)
+	for k, v := range c.Metadata.meta {
+		res.Metadata.meta[k] = v
+	}
+	res.idStr = c.idStr
+	return &res
+}
+
 // Bind represents a bind in Manba.
 // It adds some helper methods along with Metadata to the original API object.
 type Bind struct {
@@ -154,6 +196,19 @@ func (c *Bind) Identifier() string {
 // Equal returns true if c and c2 are equal.
 func (c *Bind) Equal(c2 *Bind) bool {
 	return reflect.DeepEqual(c, c2)
+}
+
+// DeepCopy bind
+func (c *Bind) DeepCopy() *Bind {
+	var res Bind
+	res.Metadata = Metadata{
+		meta: make(map[string]interface{}),
+	}
+	deepCopyManbaStruct(&c.Bind, &res.Bind)
+	for k, v := range c.Metadata.meta {
+		res.Metadata.meta[k] = v
+	}
+	return &res
 }
 
 func deepCopyManbaStruct(src, dist pb) error {

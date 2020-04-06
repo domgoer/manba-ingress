@@ -75,7 +75,7 @@ func getCluster(txn *memdb.Txn, searches ...string) (*Cluster, error) {
 		if !ok {
 			panic(unexpectedType)
 		}
-		return &Cluster{Cluster: *DeepCopyManbaCluster(cluster)}, nil
+		return cluster.DeepCopy(), nil
 	}
 	return nil, ErrNotFound
 }
@@ -106,6 +106,7 @@ func (c *ClusterCollection) Update(cluster Cluster) error {
 	if err != nil {
 		return err
 	}
+	cluster.idStr = id
 
 	err = txn.Insert(clusterTableName, &cluster)
 	if err != nil {

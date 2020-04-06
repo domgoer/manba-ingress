@@ -75,7 +75,7 @@ func getRouting(txn *memdb.Txn, searches ...string) (*Routing, error) {
 		if !ok {
 			panic(unexpectedType)
 		}
-		return &Routing{Routing: *DeepCopyManbaRouting(routing)}, nil
+		return routing.DeepCopy(), nil
 	}
 	return nil, ErrNotFound
 }
@@ -106,6 +106,8 @@ func (c *RoutingCollection) Update(routing Routing) error {
 	if err != nil {
 		return err
 	}
+
+	routing.idStr = id
 
 	err = txn.Insert(routingTableName, &routing)
 	if err != nil {

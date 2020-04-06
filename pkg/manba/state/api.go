@@ -76,7 +76,7 @@ func getAPI(txn *memdb.Txn, searches ...string) (*API, error) {
 		if !ok {
 			panic(unexpectedType)
 		}
-		return &API{API: *DeepCopyManbaAPI(api)}, nil
+		return api.DeepCopy(), nil
 	}
 	return nil, ErrNotFound
 }
@@ -107,6 +107,8 @@ func (c *APICollection) Update(api API) error {
 	if err != nil {
 		return err
 	}
+
+	api.idStr = id
 
 	err = txn.Insert(apiTableName, &api)
 	if err != nil {

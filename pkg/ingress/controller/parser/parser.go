@@ -23,7 +23,7 @@ import (
 // Routing represents a Manba Routing and holds a reference to the Ingress
 // rule.
 type Routing struct {
-	APIName string
+	APIName     string
 	ClusterName string
 	metapb.Routing
 }

@@ -75,7 +75,7 @@ func getServer(txn *memdb.Txn, searches ...string) (*Server, error) {
 			panic(unexpectedType)
 		}
 		dc := server.DeepCopy()
-		return &dc, nil
+		return dc, nil
 	}
 	return nil, ErrNotFound
 }
@@ -106,6 +106,7 @@ func (c *ServerCollection) Update(server Server) error {
 	if err != nil {
 		return err
 	}
+	server.idStr = id
 
 	err = txn.Insert(serverTableName, &server)
 	if err != nil {
@@ -164,7 +165,7 @@ func (c *ServerCollection) GetAll() ([]*Server, error) {
 			panic(unexpectedType)
 		}
 		dc := s.DeepCopy()
-		res = append(res, &dc)
+		res = append(res, dc)
 	}
 	txn.Commit()
 	return res, nil
