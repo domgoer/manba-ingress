@@ -180,10 +180,10 @@ func CompareAPI(r1, r2 *API) bool {
 
 	d1.XXX_unrecognized = nil
 	d2.XXX_unrecognized = nil
-	for _ , node := range d1.Nodes {
+	for _, node := range d1.Nodes {
 		node.XXX_unrecognized = nil
 	}
-	for _ ,node := range d2.Nodes {
+	for _, node := range d2.Nodes {
 		node.XXX_unrecognized = nil
 	}
 

@@ -315,17 +315,6 @@ func (p *Parser) fillOverrides(state ManbaState) error {
 			}
 			overrideAPI(&state.Services[i].APIs[j], manbaIngress)
 		}
-		// Servers
-		// for j := 0; j < len(state.Servers); j++ {
-		// 	pods, err := p.getPodsFromService(state.Services[i])
-		// 	if err == nil {
-		// 		overrideServer(&state.Servers[j], pods)
-		// 	} else {
-		// 		glog.Error(errors.Wrapf(err, "fetching Pods from services '%v' in namespace '%v'",
-		// 			state.Services[i].K8SService.Name, state.Services[i].Namespace))
-		// 	}
-		// }
-
 	}
 	return nil
 }
@@ -334,8 +323,6 @@ func (p *Parser) fillClusterByManbaIngress(service *Service, manbaIngress *confi
 	if manbaIngress == nil || manbaIngress.Proxy == nil {
 		return
 	}
-
-	// s := manbaIngress.Proxy
 }
 
 func (p *Parser) fillServers(services ...Service) ([]Server, error) {

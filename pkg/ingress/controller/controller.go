@@ -80,7 +80,7 @@ func NewManbaController(cfg Config, updateCh *channels.RingChannel, store store.
 		syncRateLimiter: flowcontrol.NewTokenBucketRateLimiter(cfg.SyncRateLimit, 1),
 		stopCh:          make(chan struct{}),
 	}
-	m.syncQueue = task.NewTaskQueue(m.syncIngress)
+	m.syncQueue = task.NewTaskQueue(m.syncManbaIngress)
 	m.parser = parser.New(m.store)
 
 	pod, err := k8s.GetPodDetails(cfg.KubeClient)
@@ -130,7 +130,7 @@ func NewManbaController(cfg Config, updateCh *channels.RingChannel, store store.
 // sync collects all the pieces required to assemble the configuration file and
 // then sends the content to the backend (OnUpdate) receiving the populated
 // template as response reloading the backend if is required.
-func (m *ManbaController) syncIngress(interface{}) error {
+func (m *ManbaController) syncManbaIngress(interface{}) error {
 	m.syncRateLimiter.Accept()
 
 	if m.syncQueue.IsShuttingDown() {

@@ -18,7 +18,6 @@ import (
 
 const (
 	ep  = "endpoint"
-	ing = "ingress"
 	svc = "service"
 	mi  = "manbaIng"
 )
@@ -27,10 +26,10 @@ const (
 // about ingresses, services, secrets and ingress annotations.
 type Store interface {
 	GetEndpointsForService(namespace, name string) (*corev1.Endpoints, error)
-	ListIngresses() []*networkingv1beta1.Ingress
 	GetService(namespace, name string) (*corev1.Service, error)
 	GetPodsForService(namespace, name string) ([]corev1.Pod, error)
 	GetManbaIngress(namespace, name string) (*configurationv1beta1.ManbaIngress, error)
+	ListManbaIngresses() []*configurationv1beta1.ManbaIngress
 }
 
 type store struct {
@@ -59,12 +58,16 @@ func (s *store) GetEndpointsForService(namespace, name string) (*corev1.Endpoint
 	return eps.(*corev1.Endpoints), nil
 }
 
-// ListIngresses returns the list of Ingresses
-func (s *store) ListIngresses() []*networkingv1beta1.Ingress {
+// ListManbaIngresses returns the list of Manba Ingresses
+func (s *store) ListManbaIngresses() []*configurationv1beta1.ManbaIngress {
 	// filter ingress rules
-	var ingresses []*networkingv1beta1.Ingress
-	for _, item := range s.getStore(ing).List() {
-		ing := networkingIngressV1Beta1(item)
+	var ingresses []*configurationv1beta1.ManbaIngress
+	for _, item := range s.getStore(mi).List() {
+		ing, ok := item.(*configurationv1beta1.ManbaIngress)
+		if !ok {
+			glog.Warningf("invalid type for ingress, %v", item)
+			continue
+		}
 		if !s.isValidIngresClass(&ing.ObjectMeta) {
 			continue
 		}
@@ -125,25 +128,4 @@ func New(kc kubernetes.Interface, getStore func(string) cache.Store, isValidIngr
 		getStore:           getStore,
 		isValidIngresClass: isValidIngresClassFunc,
 	}
-}
-
-func networkingIngressV1Beta1(obj interface{}) *networkingv1beta1.Ingress {
-	networkingIngress, okNetworking := obj.(*networkingv1beta1.Ingress)
-	if okNetworking {
-		return networkingIngress
-	}
-	extensionsIngress, okExtension := obj.(*extensionsv1beta1.Ingress)
-	if !okExtension {
-		glog.Errorf("ingress resource can not be casted to extensions.Ingress" +
-			" or networking.Ingress")
-		return nil
-	}
-	networkingIngress = &networkingv1beta1.Ingress{}
-	err := ingressConversionScheme.Convert(extensionsIngress, networkingIngress, nil)
-	if err != nil {
-		glog.Error("failed to convert extensions.Ingress "+
-			"to networking.Ingress", err)
-		return nil
-	}
-	return networkingIngress
 }

@@ -33,12 +33,6 @@ func CreateInformers(k8sCli kubernetes.Interface, cfg *rest.Config, syncPeriod t
 
 	var informers []cache.SharedIndexInformer
 
-	// create ingress informer
-	ingInformer := informerFactory.Networking().V1beta1().Ingresses().Informer()
-	storesMap["ingress"] = ingInformer.GetStore()
-	ingInformer.AddEventHandler(reh)
-	informers = append(informers, ingInformer)
-
 	// create endpoint informer
 	epInformer := informerFactory.Core().V1().Endpoints().Informer()
 	storesMap["endpoint"] = epInformer.GetStore()
