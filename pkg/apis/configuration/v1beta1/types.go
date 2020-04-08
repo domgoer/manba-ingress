@@ -50,6 +50,7 @@ type Rule struct {
 	AuthFilter      *string                 `json:"authFilter,omitempty"`
 	MaxQPS          int64                   `json:"maxQPS,omitempty"`
 	RateLimitOption *string                 `json:"rateLimitOption,omitempty"`
+	Backend         *Backend                `json:"backend,omitempty"`
 	Paths           []Path                  `json:"paths,omitempty"`
 }
 

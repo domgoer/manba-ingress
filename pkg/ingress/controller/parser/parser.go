@@ -96,7 +96,7 @@ func New(s store.Store) *Parser {
 // It throws an error if there is an error returned from client-go.
 func (p *Parser) Build() (*ManbaState, error) {
 	var state ManbaState
-	ings := p.store.ListIngresses()
+	ings := p.store.ListManbaIngresses()
 	// parse ingress rules
 	parsedInfo, err := p.parseIngressRules(ings)
 	if err != nil {
@@ -156,7 +156,7 @@ func (p *Parser) Build() (*ManbaState, error) {
 }
 
 func (p *Parser) parseIngressRules(
-	ingressList []*networkingv1beta1.Ingress) (*parsedIngressRules, error) {
+	ingressList []*configurationv1beta1.ManbaIngress) (*parsedIngressRules, error) {
 
 	sort.SliceStable(ingressList, func(i, j int) bool {
 		return ingressList[i].CreationTimestamp.Before(

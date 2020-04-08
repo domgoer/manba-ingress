@@ -3,7 +3,6 @@ package controller
 import (
 	"context"
 	"fmt"
-	"sort"
 	"sync"
 	"time"
 
@@ -138,12 +137,12 @@ func (m *ManbaController) syncManbaIngress(interface{}) error {
 	}
 
 	// Sort ingress rules using the ResourceVersion field
-	ings := m.store.ListIngresses()
-	sort.SliceStable(ings, func(i, j int) bool {
-		ir := ings[i].ResourceVersion
-		jr := ings[j].ResourceVersion
-		return ir < jr
-	})
+	// ings := m.store.ListIngresses()
+	// sort.SliceStable(ings, func(i, j int) bool {
+	// 	ir := ings[i].ResourceVersion
+	// 	jr := ings[j].ResourceVersion
+	// 	return ir < jr
+	// })
 
 	glog.V(2).Infof("syncing Ingress configuration...")
 
