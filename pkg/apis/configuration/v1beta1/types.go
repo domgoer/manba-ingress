@@ -34,33 +34,35 @@ type ManbaIngressList struct {
 
 // ManbaIngressSpec api list
 type ManbaIngressSpec struct {
-	Rules []Rule                         `json:"rules,omitempty"`
+	Rules []ManbaIngressRule             `json:"rules,omitempty"`
 	TLS   []networkingv1beta1.IngressTLS `json:"tls,omitempty"`
 }
 
-// Rule implements manba api
-type Rule struct {
-	Host            string                  `json:"host,omitempty"`
+// ManbaIngressRule implements manba api
+type ManbaIngressRule struct {
+	Host string `json:"host,omitempty"`
+	// default value
 	Method          *string                 `json:"method,omitempty"`
 	Status          *string                 `json:"status,omitempty"`
 	IPAccessControl *metapb.IPAccessControl `json:"ipAccessControl,omitempty"`
 	DefaultValue    *metapb.HTTPResult      `json:"defaultValue,omitempty"`
-	UseDefault      bool                    `json:"useDefault,omitempty"`
+	UseDefault      *bool                   `json:"useDefault,omitempty"`
 	CircuitBreaker  *metapb.CircuitBreaker  `json:"circuitBreaker,omitempty"`
 	AuthFilter      *string                 `json:"authFilter,omitempty"`
 	MaxQPS          int64                   `json:"maxQPS,omitempty"`
 	RateLimitOption *string                 `json:"rateLimitOption,omitempty"`
-	Backend         *Backend                `json:"backend,omitempty"`
-	Paths           []Path                  `json:"paths,omitempty"`
+	Backend         *ManbaIngressBackend    `json:"backend,omitempty"`
+
+	Paths []ManbaIngressPath `json:"paths,omitempty"`
 }
 
 // DeepCopyInto ...
-func (in *Rule) DeepCopyInto(out *Rule) {
+func (in *ManbaIngressRule) DeepCopyInto(out *ManbaIngressRule) {
 	deepcopy(in, out)
 }
 
-// Path contains manba api and dispatchNodes and routing
-type Path struct {
+// ManbaIngressPath contains manba api and dispatchNodes and routing
+type ManbaIngressPath struct {
 	Method           string                   `json:"method,omitempty"`
 	URLPattern       string                   `json:"urlPattern,omitempty"`
 	Status           string                   `json:"status,omitempty"`
@@ -70,23 +72,23 @@ type Path struct {
 	RenderTemplate   *metapb.RenderTemplate   `json:"renderTemplate,omitempty"`
 	UseDefault       bool                     `json:"useDefault,omitempty"`
 	MatchRule        string                   `json:"matchRule,omitempty"`
-	Position         int32                    `json:"position,omitempty"`
+	Position         uint32                   `json:"position,omitempty"`
 	Tags             []*metapb.PairValue      `json:"tags,omitempty"`
 	WebSocketOptions *metapb.WebSocketOptions `json:"webSocketOptions,omitempty"`
 	MaxQPS           int64                    `json:"maxQPS,omitempty"`
 	CircuitBreaker   *metapb.CircuitBreaker   `json:"circuitBreaker,omitempty"`
 	RateLimitOption  string                   `json:"rateLimitOption,omitempty"`
-	Backends         []Backend                `json:"backends,omitempty"`
-	Route            *Route                   `json:"route,omitempty"`
+	Backends         []ManbaIngressBackend    `json:"backends,omitempty"`
+	Route            *ManbaIngressRoute       `json:"route,omitempty"`
 }
 
 // DeepCopyInto ...
-func (in *Path) DeepCopyInto(out *Path) {
+func (in *ManbaIngressPath) DeepCopyInto(out *ManbaIngressPath) {
 	deepcopy(in, out)
 }
 
-// Backend is dispatchNodes config in manba
-type Backend struct {
+// ManbaIngressBackend is dispatchNodes config in manba
+type ManbaIngressBackend struct {
 	ServiceName   string                `json:"serviceName,omitempty"`
 	ServicePort   int32                 `json:"servicePort,omitempty"`
 	URLRewrite    string                `json:"urlRewrite,omitempty"`
@@ -104,12 +106,12 @@ type Backend struct {
 }
 
 // DeepCopyInto ...
-func (in *Backend) DeepCopyInto(out *Backend) {
+func (in *ManbaIngressBackend) DeepCopyInto(out *ManbaIngressBackend) {
 	deepcopy(in, out)
 }
 
-// Route is manba routing
-type Route struct {
+// ManbaIngressRoute is manba routing
+type ManbaIngressRoute struct {
 	Status      string             `json:"status,omitempty"`
 	Conditions  []metapb.Condition `json:"conditions,omitempty"`
 	Strategy    string             `json:"strategy,omitempty"`
@@ -117,7 +119,7 @@ type Route struct {
 }
 
 // DeepCopyInto ...
-func (in *Route) DeepCopyInto(out *Route) {
+func (in *ManbaIngressRoute) DeepCopyInto(out *ManbaIngressRoute) {
 	deepcopy(in, out)
 }
 

@@ -37,7 +37,15 @@ type Service struct {
 
 	Namespace  string
 	K8SService corev1.Service
-	Backend    networkingv1beta1.IngressBackend
+	Backend    configurationv1beta1.ManbaIngressBackend
+}
+
+// Cluster containers k8s service and manba cluster
+type Cluster struct {
+	metapb.Cluster
+
+	K8SService     corev1.Service
+	K8SServicePort string
 }
 
 // Server contains k8s endpoint and manba server
@@ -51,9 +59,7 @@ type Server struct {
 type API struct {
 	metapb.API
 
-	Routings []Routing
-	Proxies  []Proxy
-	Ingress  networkingv1beta1.Ingress
+	IngressRule configurationv1beta1.ManbaIngressRule
 }
 
 // Plugin implements manba Plugin
@@ -84,6 +90,7 @@ type ManbaState struct {
 
 type parsedIngressRules struct {
 	ServiceNameToServices map[string]Service
+	APINameToAPIs         map[string]API
 }
 
 // New returns a new parser backed with store.
@@ -104,7 +111,7 @@ func (p *Parser) Build() (*ManbaState, error) {
 	}
 
 	// populate Kubernetes Service
-	for key, service := range parsedInfo.ServiceNameToServices {
+	for key, api := range parsedInfo.APINameToAPIs {
 		k8sSvc, err := p.store.GetService(service.Namespace, service.Backend.ServiceName)
 		if err != nil {
 			glog.Errorf("getting service: %v", err)
@@ -162,9 +169,6 @@ func (p *Parser) parseIngressRules(
 		return ingressList[i].CreationTimestamp.Before(
 			&ingressList[j].CreationTimestamp)
 	})
-	// generate the following:
-	// Services and Routes
-	var allDefaultBackends []networkingv1beta1.Ingress
 	// secretNameToSNIs := make(map[string][]string)
 	serviceNameToServices := make(map[string]Service)
 
@@ -172,108 +176,34 @@ func (p *Parser) parseIngressRules(
 		ingress := *ingressList[i]
 		ingressSpec := ingress.Spec
 
-		if ingressSpec.Backend != nil {
-			allDefaultBackends = append(allDefaultBackends, ingress)
-		}
-
-		// processTLSSections(ingressSpec.TLS, ingress.Namespace, secretNameToSNIs)
 		for i, rule := range ingressSpec.Rules {
-			host := rule.Host
-			if rule.HTTP == nil {
-				continue
-			}
-			for j, rule := range rule.HTTP.Paths {
-				path := rule.Path
+			for i, path := range rule.Paths {
+				urlPattern := path.URLPattern
 
-				// isACMEChallenge := strings.HasPrefix(path, "/.well-known/acme-challenge/")
-
-				if path == "" {
-					path = "/"
+				if urlPattern == "" {
+					urlPattern = "/"
 				}
 
+				name := fmt.Sprintf("%s.%s.%d%d", ingress.Namespace, ingress.Name, i, j)
 				i := API{
 					API: metapb.API{
-						Name:       fmt.Sprintf("%s.%s.%d%d", ingress.Namespace, ingress.Name, i, j),
-						URLPattern: path,
-						// no method fields in ingress rule
-						Method: "*",
+						Name:   name,
+						Domain: rule.Host,
 					},
-					Ingress: ingress,
+					IngressRule: rule,
 				}
 
-				if host != "" {
-					i.API.Domain = host
-				}
+				i.fromManbaIngressPath(&path)
 
-				serviceName := ingress.Namespace + "." +
-					rule.Backend.ServiceName + "." +
-					rule.Backend.ServicePort.String()
+				// TODO: set default value
 
-				service, ok := serviceNameToServices[serviceName]
-				if !ok {
-					service = Service{
-						Cluster: metapb.Cluster{
-							Name: fmt.Sprintf("%s.%s.%s.svc", rule.Backend.ServiceName, ingress.Namespace, rule.Backend.ServicePort.String()),
-						},
-						Namespace: ingress.Namespace,
-						Backend:   rule.Backend,
-					}
-				}
-
-				proxy := Proxy{
-					ClusterName: service.GetName(),
-				}
-				i.Proxies = append(i.Proxies, proxy)
-
-				service.APIs = append(service.APIs, i)
-				serviceNameToServices[serviceName] = service
+				apiNameToAPIs[name] = i
 			}
 		}
-
-	}
-
-	sort.SliceStable(allDefaultBackends, func(i, j int) bool {
-		return allDefaultBackends[i].CreationTimestamp.Before(&allDefaultBackends[j].CreationTimestamp)
-	})
-	// Process the default backend
-	if len(allDefaultBackends) > 0 {
-		ingress := allDefaultBackends[0]
-		defaultBackend := allDefaultBackends[0].Spec.Backend
-		serviceName := allDefaultBackends[0].Namespace + "." +
-			defaultBackend.ServiceName + "." +
-			defaultBackend.ServicePort.String()
-		service, ok := serviceNameToServices[serviceName]
-		if !ok {
-			service = Service{
-				Cluster: metapb.Cluster{
-					Name: serviceName,
-				},
-				Namespace: ingress.Namespace,
-				Backend:   *defaultBackend,
-			}
-		}
-
-		i := API{
-			API: metapb.API{
-				Name:       serviceName,
-				URLPattern: "/",
-				// no method fields in ingress rule
-				Method: "*",
-			},
-			Ingress: ingress,
-		}
-
-		proxy := Proxy{
-			ClusterName: service.GetName(),
-		}
-		i.Proxies = append(i.Proxies, proxy)
-
-		service.APIs = append(service.APIs, i)
-		serviceNameToServices[serviceName] = service
 	}
 
 	return &parsedIngressRules{
-		ServiceNameToServices: serviceNameToServices,
+		APINameToAPIs: apiNameToAPIs,
 	}, nil
 }
 
@@ -602,4 +532,45 @@ func (p *Parser) getManbaIngressFromIngress(ingress *networkingv1beta1.Ingress) 
 
 func (p *Parser) getPodsFromService(service Service) ([]corev1.Pod, error) {
 	return p.store.GetPodsForService(service.Namespace, service.K8SService.Name)
+}
+
+func (a *API) fromManbaIngressPath(path *configurationv1beta1.ManbaIngressPath) {
+	if a == nil {
+		a = &API{}
+	}
+
+	meta := a.API
+	meta.Method = path.Method
+	meta.URLPattern = path.URLPattern
+	meta.Status = metapb.Status(metapb.Status_value[path.Status])
+	meta.DefaultValue = path.DefaultValue
+	meta.Perms = path.Perms
+	meta.AuthFilter = path.AuthFilter
+	meta.RenderTemplate = path.RenderTemplate
+	meta.UseDefault = path.UseDefault
+	meta.MatchRule = metapb.MatchRule(metapb.MatchRule_value[path.MatchRule])
+	meta.Position = path.Position
+	meta.Tags = path.Tags
+	meta.WebSocketOptions = path.WebSocketOptions
+	// meta.MaxQPS = path.MaxQPS
+	// meta.CircuitBreaker = path.CircuitBreaker
+	// meta.RateLimitOption = path.RateLimitOption
+
+	for _, backend := range path.Backends {
+		meta.Nodes = append(meta.Nodes, &metapb.DispatchNode{
+			URLRewrite:    backend.URLRewrite,
+			AttrName:      backend.AttrName,
+			Validations:   backend.Validations,
+			Cache:         backend.Cache,
+			DefaultValue:  backend.DefaultValue,
+			UseDefault:    backend.UseDefault,
+			BatchIndex:    backend.BatchIndex,
+			RetryStrategy: backend.RetryStrategy,
+			WriteTimeout:  backend.WriteTimeout,
+			ReadTimeout:   backend.ReadTimeout,
+		})
+	}
+
+	a.API = meta
+
 }
