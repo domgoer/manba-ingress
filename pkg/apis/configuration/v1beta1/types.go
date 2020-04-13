@@ -21,6 +21,9 @@ type ManbaIngress struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	Spec *ManbaIngressSpec `json:"spec,omitempty"`
+
+	// Status *ManbaIngressStatus `json:"status,omitempty"`
+	Status networkingv1beta1.IngressStatus `json:"status,omitempty"`
 }
 
 // ManbaIngressList is a list of ManbaIngress
@@ -90,7 +93,7 @@ func (in *ManbaIngressPath) DeepCopyInto(out *ManbaIngressPath) {
 // ManbaIngressBackend is dispatchNodes config in manba
 type ManbaIngressBackend struct {
 	ServiceName   string                `json:"serviceName,omitempty"`
-	ServicePort   int32                 `json:"servicePort,omitempty"`
+	ServicePort   string                `json:"servicePort,omitempty"`
 	URLRewrite    string                `json:"urlRewrite,omitempty"`
 	AttrName      string                `json:"attrName,omitempty"`
 	Validations   []*metapb.Validation  `json:"validations,omitempty"`
@@ -133,6 +136,9 @@ func (in *ManbaIngress) DeepCopyInto(out *ManbaIngress) {
 		deepcopy(in, out)
 	}
 }
+
+// ManbaIngressStatus of manba ingress controller
+type ManbaIngressStatus struct{}
 
 func deepcopy(in, out interface{}) {
 	b, err := json.Marshal(in)

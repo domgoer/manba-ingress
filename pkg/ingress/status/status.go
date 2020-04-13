@@ -31,15 +31,13 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/klog"
 
-	"github.com/domgoer/manba-ingress/pkg/utils"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
+	configurationv1beta1 "github.com/domgoer/manba-ingress/pkg/apis/configuration/v1beta1"
 	"github.com/domgoer/manba-ingress/pkg/ingress/k8s"
 	"github.com/domgoer/manba-ingress/pkg/ingress/task"
+	"github.com/domgoer/manba-ingress/pkg/utils"
 	"github.com/golang/glog"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-
-	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 )
 
 const (
@@ -56,8 +54,8 @@ type Syncer interface {
 }
 
 type ingressLister interface {
-	// ListIngresses returns the list of Ingresses
-	ListIngresses() []*networkingv1beta1.Ingress
+	// ListManbaIngresses returns the list of Manba Ingresses
+	ListManbaIngresses() []*configurationv1beta1.ManbaIngress
 }
 
 // Config ...
@@ -142,7 +140,7 @@ func (s *statusSync) Shutdown(isLeader bool) {
 
 // updateStatus changes the status information of Ingress rules
 func (s *statusSync) updateStatus(newIngressPoint []corev1.LoadBalancerIngress) {
-	ings := s.IngressLister.ListIngresses()
+	ings := s.IngressLister.ListManbaIngresses()
 
 	p := pool.NewLimited(10)
 	defer p.Close()
@@ -253,7 +251,7 @@ func (s *statusSync) isRunningMultiplePods() bool {
 	return len(pods.Items) > 1
 }
 
-func (s *statusSync) runUpdate(ing *networkingv1beta1.Ingress, status []corev1.LoadBalancerIngress,
+func (s *statusSync) runUpdate(ing *configurationv1beta1.ManbaIngress, status []corev1.LoadBalancerIngress,
 	client kubernetes.Interface) pool.WorkFunc {
 	return func(wu pool.WorkUnit) (interface{}, error) {
 		if wu.IsCancelled() {

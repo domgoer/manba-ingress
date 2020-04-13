@@ -31,19 +31,9 @@ type Cluster struct {
 // Routing ...
 type Routing struct {
 	*metapb.Routing
-	APIName     string
-	ClusterName string
-}
-
-// Proxy ...
-type Proxy struct {
-	APIName     string
-	ClusterName string
-	*metapb.DispatchNode
 }
 
 // API ...
 type API struct {
 	*metapb.API
-	Proxies []Proxy
 }

@@ -96,17 +96,8 @@ func (m *ManbaController) toStable(s *parser.ManbaState) *dump.ManbaRawState {
 	var ms dump.ManbaRawState
 	for _, api := range s.APIs {
 		a := api.API
-		var proxies []dump.Proxy
-		for _, p := range api.Proxies {
-			proxies = append(proxies, dump.Proxy{
-				APIName:      a.GetName(),
-				ClusterName:  p.ClusterName,
-				DispatchNode: &p.DispatchNode,
-			})
-		}
 		ms.APIs = append(ms.APIs, &dump.API{
-			API:     &a,
-			Proxies: proxies,
+			API: &a,
 		})
 	}
 
@@ -128,9 +119,7 @@ func (m *ManbaController) toStable(s *parser.ManbaState) *dump.ManbaRawState {
 	for _, routing := range s.Routings {
 		r := routing.Routing
 		ms.Routings = append(ms.Routings, &dump.Routing{
-			Routing:     &r,
-			APIName:     routing.APIName,
-			ClusterName: routing.ClusterName,
+			Routing: &r,
 		})
 	}
 	sort.SliceStable(ms.Routings, func(i, j int) bool {
@@ -141,7 +130,7 @@ func (m *ManbaController) toStable(s *parser.ManbaState) *dump.ManbaRawState {
 		c := svc.Cluster
 
 		ms.Clusters = append(ms.Clusters, &dump.Cluster{
-			Cluster: &c,
+			Cluster: &c.Cluster,
 		})
 		for _, svr := range svc.Servers {
 			// Add binds
@@ -229,16 +218,6 @@ func (m *ManbaController) setTargetsIDs(p *parser.ManbaState, target *dump.Manba
 				api.ID = a.GetID()
 			}
 		}
-		for _, proxy := range api.Proxies {
-			clusterID, ok := clusterNameIDsMap[proxy.ClusterName]
-			if !ok {
-				glog.Warningf("cluster %s not found in proxy", proxy.ClusterName)
-				continue
-			}
-			proxy.DispatchNode.ClusterID = clusterID
-			api.Nodes = append(api.Nodes, proxy.DispatchNode)
-		}
-
 	}
 
 	for _, routing := range target.Routings {

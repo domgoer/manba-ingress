@@ -9,15 +9,11 @@ import (
 // Get raw data from manba api-server
 func Get(client manba.Client) (*ManbaRawState, error) {
 	var res ManbaRawState
-	serverIDAddrMap := make(map[uint64]string)
-	clusterIDNameMap := make(map[uint64]string)
-	apiIDNameMap := make(map[uint64]string)
 
 	err := client.GetClusterList(func(c *metapb.Cluster) bool {
 		res.Clusters = append(res.Clusters, &Cluster{
 			Cluster: c,
 		})
-		clusterIDNameMap[c.GetID()] = c.GetName()
 		return true
 	})
 	if err != nil {
@@ -28,7 +24,6 @@ func Get(client manba.Client) (*ManbaRawState, error) {
 		res.Servers = append(res.Servers, &Server{
 			Server: s,
 		})
-		serverIDAddrMap[s.GetID()] = s.GetAddr()
 		return true
 	})
 	if err != nil {
@@ -42,8 +37,6 @@ func Get(client manba.Client) (*ManbaRawState, error) {
 		}
 		for _, id := range ids {
 			res.Binds = append(res.Binds, &Bind{
-				ClusterName: c.GetName(),
-				ServerAddr:  serverIDAddrMap[id],
 				Bind: &metapb.Bind{
 					ClusterID: c.GetID(),
 					ServerID:  id,
@@ -53,19 +46,9 @@ func Get(client manba.Client) (*ManbaRawState, error) {
 	}
 
 	err = client.GetAPIList(func(a *metapb.API) bool {
-		var proxies []Proxy
-		for _, node := range a.Nodes {
-			proxies = append(proxies, Proxy{
-				APIName:      a.GetName(),
-				ClusterName:  clusterIDNameMap[node.ClusterID],
-				DispatchNode: node,
-			})
-		}
 		res.APIs = append(res.APIs, &API{
-			API:     a,
-			Proxies: proxies,
+			API: a,
 		})
-		apiIDNameMap[a.GetID()] = a.GetName()
 		return true
 	})
 	if err != nil {
@@ -74,9 +57,7 @@ func Get(client manba.Client) (*ManbaRawState, error) {
 
 	err = client.GetRoutingList(func(r *metapb.Routing) bool {
 		res.Routings = append(res.Routings, &Routing{
-			Routing:     r,
-			APIName:     apiIDNameMap[r.GetAPI()],
-			ClusterName: clusterIDNameMap[r.GetClusterID()],
+			Routing: r,
 		})
 		return true
 	})
