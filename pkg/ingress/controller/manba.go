@@ -69,7 +69,7 @@ func (m *ManbaController) onUpdate(p *parser.ManbaState) error {
 		return errors.Wrap(err, "get current state")
 	}
 
-	err = m.setTargetsIDs(p, targetRaw, currentState)
+	err = m.setTargetsIDs(targetRaw, currentState)
 	if err != nil {
 		return errors.Wrap(err, "set target IDs")
 	}
@@ -99,6 +99,7 @@ func (m *ManbaController) toStable(s *parser.ManbaState) *dump.ManbaRawState {
 		ms.APIs = append(ms.APIs, &dump.API{
 			API: &a,
 		})
+
 	}
 
 	sort.SliceStable(ms.APIs, func(i, j int) bool {
@@ -126,19 +127,21 @@ func (m *ManbaController) toStable(s *parser.ManbaState) *dump.ManbaRawState {
 		return ms.Routings[i].Name < ms.Routings[j].Name
 	})
 
-	for _, svc := range s.Services {
-		c := svc.Cluster
+	for _, cls := range s.Clusters {
+		c := cls.Cluster
 
 		ms.Clusters = append(ms.Clusters, &dump.Cluster{
-			Cluster: &c.Cluster,
+			Cluster: &c,
 		})
-		for _, svr := range svc.Servers {
+
+		for _, svr := range cls.Servers {
 			// Add binds
 			ms.Binds = append(ms.Binds, &dump.Bind{
 				ClusterName: c.GetName(),
 				ServerAddr:  svr.GetAddr(),
 			})
 		}
+
 	}
 
 	sort.SliceStable(ms.Clusters, func(i, j int) bool {
@@ -154,7 +157,7 @@ func (m *ManbaController) toStable(s *parser.ManbaState) *dump.ManbaRawState {
 
 // setTargetsIDs gets their id from the existing state in manba and fill it into k8s state
 // p: Used to obtain the relationship between various resources
-func (m *ManbaController) setTargetsIDs(p *parser.ManbaState, target *dump.ManbaRawState, current *state.ManbaState) error {
+func (m *ManbaController) setTargetsIDs(target *dump.ManbaRawState, current *state.ManbaState) error {
 	serverAddrIDsMap := make(map[string]uint64, len(target.Servers))
 	clusterNameIDsMap := make(map[string]uint64, len(target.Clusters))
 
@@ -217,6 +220,10 @@ func (m *ManbaController) setTargetsIDs(p *parser.ManbaState, target *dump.Manba
 			} else {
 				api.ID = a.GetID()
 			}
+		}
+
+		for _, node := range api.Nodes {
+			// node.ClusterID
 		}
 	}
 

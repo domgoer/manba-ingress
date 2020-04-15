@@ -161,6 +161,18 @@ spec:
                                 expect:
                                   type: string
                       defaultValue: *defaultValue
+                      route:
+                        type: object
+                        properties:
+                          status: *status
+                          strategy:
+                            type: string
+                            enum:
+                            - Split
+                            - Copy
+                          trafficRate:
+                            type: integer
+                          conditions: *conditions
                       useDefault:
                         type: boolean
                       batchIndex:
@@ -200,8 +212,6 @@ spec:
                         authFilter:
                           type: string
                         renderTemplate:
-                          type: array
-                          items:
                             type: object
                             properties:
                               objects:
@@ -241,12 +251,4 @@ spec:
                         backends:
                           type: array
                           items: *backend
-                        route:
-                          type: object
-                          properties:
-                            status: *status
-                            strategy:
-                              type: string
-                            trafficRate:
-                              type: integer
-                            conditions: *conditions
+

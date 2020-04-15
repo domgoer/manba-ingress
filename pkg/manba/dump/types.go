@@ -36,4 +36,14 @@ type Routing struct {
 // API ...
 type API struct {
 	*metapb.API
+
+	proxies []Proxy
+}
+
+// Proxy ...
+type Proxy struct {
+	*metapb.DispatchNode
+
+	ServiceName string
+	ServicePort string
 }

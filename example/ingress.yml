@@ -1,0 +1,32 @@
+apiVersion: configuration.manba.io/v1beta1
+kind: ManbaIngress
+metadata:
+  name: test-domgoer
+  namespace: default
+spec:
+  rules:
+  - host: test.domgoer.com
+    paths:
+    - method: POST
+      urlPattern: /
+      perms:
+      - a
+      - b
+      authFilter: test
+      renderTemplate:
+        objects:
+        - name: test
+          attrs:
+          - name: testa
+            extractExp: a
+      maxQPS: 100
+      backends:
+      - serviceName: api-server
+        servicePort: '9093'
+        urlRewrite: /a
+        writeTimeout: 100
+        readTimeout: 100
+        route:
+          strategy: Split
+          trafficRate: 50
+

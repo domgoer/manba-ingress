@@ -57,7 +57,7 @@ func (in *ManbaIngressBackend) DeepCopy() *ManbaIngressBackend {
 func (in *ManbaIngressList) DeepCopyInto(out *ManbaIngressList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]ManbaIngress, len(*in))

@@ -31,8 +31,8 @@ type ManbaIngress struct {
 type ManbaIngressList struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Items             []ManbaIngress `json:"items,omitempty"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []ManbaIngress `json:"items,omitempty"`
 }
 
 // ManbaIngressSpec api list
@@ -82,7 +82,6 @@ type ManbaIngressPath struct {
 	CircuitBreaker   *metapb.CircuitBreaker   `json:"circuitBreaker,omitempty"`
 	RateLimitOption  string                   `json:"rateLimitOption,omitempty"`
 	Backends         []ManbaIngressBackend    `json:"backends,omitempty"`
-	Route            *ManbaIngressRoute       `json:"route,omitempty"`
 }
 
 // DeepCopyInto ...
@@ -106,6 +105,7 @@ type ManbaIngressBackend struct {
 	ReadTimeout   int64                 `json:"readTimeout,omitempty"`
 	HostType      string                `json:"hostType,omitempty"`
 	CustomHost    string                `json:"customHost,omitempty"`
+	Route         *ManbaIngressRoute    `json:"route,omitempty"`
 }
 
 // DeepCopyInto ...

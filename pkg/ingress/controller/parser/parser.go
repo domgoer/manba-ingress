@@ -44,6 +44,7 @@ type Service struct {
 type Cluster struct {
 	metapb.Cluster
 
+	Servers        []Server
 	K8SService     corev1.Service
 	K8SServicePort string
 }
@@ -59,7 +60,7 @@ type Server struct {
 type API struct {
 	metapb.API
 
-	IngressRule configurationv1beta1.ManbaIngressRule
+	IngressPath configurationv1beta1.ManbaIngressPath
 }
 
 // Plugin implements manba Plugin
@@ -82,7 +83,6 @@ type Parser struct {
 // ManbaState holds the configuration that should be applied to Manba.
 type ManbaState struct {
 	APIs     []API
-	Services []Service
 	Servers  []Server
 	Clusters []Cluster
 	Routings []Routing
@@ -117,7 +117,15 @@ func (p *Parser) Build() (*ManbaState, error) {
 			return nil, errors.Wrap(err, "overriding ManbaIngress values")
 		}
 
-		state.Services = append(state.Services, *service)
+	}
+
+	for _, service := range parsedInfo.ServiceNameToServices {
+		state.APIs = append(state.APIs, service.APIs...)
+		service.Cluster.Servers = service.Servers
+		state.Clusters = append(state.Clusters, *service.Cluster)
+		state.Servers = append(state.Servers, service.Servers...)
+
+		// TODO: add routing
 	}
 
 	return &state, nil
