@@ -1,6 +1,10 @@
 package dump
 
-import "github.com/fagongzi/gateway/pkg/pb/metapb"
+import (
+	"fmt"
+
+	"github.com/fagongzi/gateway/pkg/pb/metapb"
+)
 
 // ManbaRawState contains all of Manba data
 type ManbaRawState struct {
@@ -37,13 +41,19 @@ type Routing struct {
 type API struct {
 	*metapb.API
 
-	proxies []Proxy
+	Proxies []Proxy
 }
 
 // Proxy ...
 type Proxy struct {
 	*metapb.DispatchNode
 
-	ServiceName string
-	ServicePort string
+	ServiceNamespace string
+	ServiceName      string
+	ServicePort      string
+}
+
+// GetClusterName returns cluster name of dispatch node
+func (p *Proxy) GetClusterName() string {
+	return fmt.Sprintf("%s.%s.%s.svc", p.ServiceNamespace, p.ServiceName, p.ServicePort)
 }

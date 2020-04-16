@@ -60,12 +60,14 @@ type Server struct {
 type API struct {
 	metapb.API
 
+	Namespace   string
 	IngressPath configurationv1beta1.ManbaIngressPath
 }
 
 // Plugin implements manba Plugin
 type Plugin struct {
 	// metapb.Plugin
+	Name string
 }
 
 // Proxy implements manba DispatchNode
@@ -116,14 +118,34 @@ func (p *Parser) Build() (*ManbaState, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "overriding ManbaIngress values")
 		}
+	}
 
+	var keysMap = make(map[string]bool)
+	// return true if everything is ok
+	check := func(key string) bool {
+		if _, ok := keysMap[key]; ok {
+			return false
+		}
+		keysMap[key] = true
+		return true
 	}
 
 	for _, service := range parsedInfo.ServiceNameToServices {
-		state.APIs = append(state.APIs, service.APIs...)
+		for _, api := range service.APIs {
+			if check(api.Name) {
+				state.APIs = append(state.APIs, api)
+			}
+		}
 		service.Cluster.Servers = service.Servers
-		state.Clusters = append(state.Clusters, *service.Cluster)
-		state.Servers = append(state.Servers, service.Servers...)
+		if check(service.Cluster.Name) {
+			state.Clusters = append(state.Clusters, *service.Cluster)
+		}
+
+		for _, server := range service.Servers {
+			if check(server.Addr) {
+				state.Servers = append(state.Servers, service.Servers...)
+			}
+		}
 
 		// TODO: add routing
 	}
@@ -159,7 +181,8 @@ func (p *Parser) parseIngressRules(
 						Name:   name,
 						Domain: rule.Host,
 					},
-					IngressRule: rule,
+					Namespace:   ingress.Namespace,
+					IngressPath: path,
 				}
 				// TODO: set default value
 

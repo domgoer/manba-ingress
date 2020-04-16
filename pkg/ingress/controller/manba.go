@@ -96,8 +96,21 @@ func (m *ManbaController) toStable(s *parser.ManbaState) *dump.ManbaRawState {
 	var ms dump.ManbaRawState
 	for _, api := range s.APIs {
 		a := api.API
+		path := api.IngressPath
+
+		var proxies []dump.Proxy
+		for i, backend := range path.Backends {
+			proxies = append(proxies, dump.Proxy{
+				// DispatchNode: ,
+				DispatchNode:     a.Nodes[i],
+				ServiceNamespace: api.Namespace,
+				ServiceName:      backend.ServiceName,
+				ServicePort:      backend.ServicePort,
+			})
+		}
 		ms.APIs = append(ms.APIs, &dump.API{
-			API: &a,
+			API:     &a,
+			Proxies: proxies,
 		})
 
 	}
@@ -141,7 +154,6 @@ func (m *ManbaController) toStable(s *parser.ManbaState) *dump.ManbaRawState {
 				ServerAddr:  svr.GetAddr(),
 			})
 		}
-
 	}
 
 	sort.SliceStable(ms.Clusters, func(i, j int) bool {
@@ -221,10 +233,14 @@ func (m *ManbaController) setTargetsIDs(target *dump.ManbaRawState, current *sta
 				api.ID = a.GetID()
 			}
 		}
-
-		for _, node := range api.Nodes {
-			// node.ClusterID
+		var nodes []*metapb.DispatchNode
+		for _, proxy := range api.Proxies {
+			n := proxy.DispatchNode
+			n.ClusterID = clusterNameIDsMap[proxy.GetClusterName()]
+			nodes = append(nodes, n)
 		}
+
+		api.Nodes = nodes
 	}
 
 	for _, routing := range target.Routings {

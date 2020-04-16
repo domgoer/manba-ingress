@@ -5,28 +5,26 @@ metadata:
   namespace: default
 spec:
   rules:
-  - host: test.domgoer.com
+  - host: test.dmc.com
     paths:
-    - method: POST
-      urlPattern: /
-      perms:
-      - a
-      - b
-      authFilter: test
-      renderTemplate:
-        objects:
-        - name: test
-          attrs:
-          - name: testa
-            extractExp: a
-      maxQPS: 100
+    - authFilter: test
       backends:
-      - serviceName: api-server
-        servicePort: '9093'
-        urlRewrite: /a
-        writeTimeout: 100
-        readTimeout: 100
+      - readTimeout: 1000
         route:
           strategy: Split
           trafficRate: 50
-
+        serviceName: api-server
+        servicePort: "9093"
+        urlRewrite: /a
+      maxQPS: 100
+      method: POST
+      perms:
+      - a
+      - b
+      renderTemplate:
+        objects:
+        - attrs:
+          - extractExp: a
+            name: testa
+          name: test
+      urlPattern: /
