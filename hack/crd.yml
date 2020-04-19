@@ -17,25 +17,37 @@ spec:
         spec:
           type: object
           properties:
-            rules:
+            hosts:
+              type: array
+              items:
+                type: string
+            http:
               type: array
               items:
                 type: object
                 properties:
-                  host:
-                    type: string
-                  method: &method
-                    type: string
-                    enum:
-                    - GET
-                    - POST
-                    - PUT
-                    - DELETE
-                  status: &status
-                    type: string
-                    enum:
-                    - on
-                    - off
+                  match:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        uri:
+                          type: object
+                          properties:
+                            pattern:
+                              type: string
+                        method: &method
+                          type: string
+                          enum:
+                          - GET
+                          - POST
+                          - PUT
+                          - DELETE
+                  rewrite:
+                    type: object
+                    properties:
+                      uri:
+                        type: string
                   ipAccessControl: &ipAccessControl
                     type: object
                     properties:
@@ -48,7 +60,39 @@ spec:
                         type: array
                         items:
                           type: string
-                          pattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$
+                          pattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$ 
+                  retry: &retry
+                        type: object
+                        properties:
+                          interval:
+                            type: integer
+                          maxTimes:
+                            type: integer
+                          codes:
+                            type: array
+                            items:
+                              type: integer
+                  renderTemplate:
+                      type: object
+                      properties:
+                        objects:
+                          type: array
+                          items:
+                            type: object
+                            properties: &renderObject
+                              name:
+                                type: string
+                              flatAttrs:
+                                type: boolean
+                              attrs:
+                                type: array
+                                items:
+                                  type: object
+                                  properties: &renderAttr
+                                    name:
+                                      type: string
+                                    extractExp:
+                                      type: string
                   defaultValue: &defaultValue
                     type: object
                     properties:
@@ -66,189 +110,101 @@ spec:
                       cookies: *pairValues
                       code:
                         type: integer
-                  useDefault:
-                    type: boolean
-                  circuitBreaker: &circuitBreaker
-                    type: object
-                    properties:
-                      closeTimeout:
-                        type: integer
-                      halfTrafficRate:
-                        type: integer
-                      rateCheckPeriod:
-                        type: integer
-                      failureRateToClose:
-                        type: integer
-                      succeedRateToOpen:
-                        type: integer
                   authFilter:
                     type: string
-                  maxQPS: &maxQPS
-                    type: integer
-                    minimum: 0
-                  rateLimitOption:
-                    type: string
-                  backend: &backend
+                  trafficPolicy: &trafficPolicy
                     type: object
                     properties:
-                      serviceName:
+                      loadBalancer:
                         type: string
-                      servicePort:
+                        enum:
+                        - RoundRobin
+                        - IPHash
+                      maxQPS: &maxQPS
+                        type: integer
+                        minimum: 0
+                      rateLimitOption:
                         type: string
-                      urlRewrite: &url
-                        type: string
-                        pattern: ^/.*$
-                      attrName:
-                        type: string
-                      validations:
-                        type: array
-                        items: &validation
-                          type: object
-                          properties:
-                            parameter: &parameter
-                              type: object
-                              properties:
-                                name:
-                                  type: string
-                                source:
-                                  type: string
-                                  enum:
-                                  - queryString
-                                  - formData
-                                  - jsonBody
-                                  - header
-                                  - cookie
-                                  - pathValue
-                                index:
-                                  type: integer
-                            required:
-                              type: boolean
-                            rules:
-                              type: array
-                              items: &validationRule
-                                type: object
-                                properties:
-                                  ruleType:
-                                    type: string
-                                    enum:
-                                    - ruleRegexp
-                                  expression:
-                                    type: string
-                      cache:
+                      circuitBreaker: &circuitBreaker
                         type: object
                         properties:
-                          keys:
-                            type: array
-                            items: *parameter
-                          deadline:
+                          closeTimeout:
                             type: integer
-                          conditions: &conditions
-                            type: array
-                            items:
-                              type: object
-                              properties:
-                                parameter: *parameter
-                                cmp:
-                                  type: string
-                                  enum:
-                                  - CMPEQ
-                                  - CMPLT
-                                  - CMPLE
-                                  - CMPGT
-                                  - CMPGE
-                                  - CMPIn
-                                  - CMPMatch
-                                expect:
-                                  type: string
-                      defaultValue: *defaultValue
-                      route:
-                        type: object
-                        properties:
-                          status: *status
-                          strategy:
-                            type: string
-                            enum:
-                            - Split
-                            - Copy
-                          trafficRate:
+                          halfTrafficRate:
                             type: integer
-                          conditions: *conditions
-                      useDefault:
-                        type: boolean
-                      batchIndex:
-                        type: integer
-                      retryStrategy:
-                        type: object
-                        properties:
-                          interval:
+                          rateCheckPeriod:
                             type: integer
-                          maxTimes:
+                          failureRateToClose:
                             type: integer
-                          codes:
-                            type: array
-                            items:
-                              type: integer
-                      writeTimeout:
-                        type: integer
-                      readTimeout:
-                        type: integer
-                      hostType:
-                        type: string
-                      customHost:
-                        type: string
-                  paths:
+                          succeedRateToOpen:
+                            type: integer
+                  route:
                     type: array
                     items:
                       type: object
                       properties:
-                        method: *method
-                        urlPattern: *url
-                        status: *status
-                        defaultValue: *defaultValue
-                        perms:
-                          type: array
-                          items:
-                            type: string
-                        authFilter:
+                        name:
                           type: string
-                        renderTemplate:
-                            type: object
-                            properties:
-                              objects:
-                                type: array
-                                items:
-                                  type: object
-                                  properties: &renderObject
-                                    name:
-                                      type: string
-                                    flatAttrs:
-                                      type: boolean
-                                    attrs:
-                                      type: array
-                                      items:
-                                        type: object
-                                        properties: &renderAttr
-                                          name:
-                                            type: string
-                                          extractExp:
-                                            type: string
-                        useDefault:
-                          type: boolean
-                        matchRule:
+                        subset:
                           type: string
-                        position:
+                        port:
                           type: integer
-                        tags: *pairValues
-                        webSocketOptions:
-                          type: object
-                          properties:
-                            origin:
-                              type: string
-                        maxQPS: *maxQPS
-                        circuitBreaker: *circuitBreaker
-                        rateLimitOption:
-                          type: string
-                        backends:
-                          type: array
-                          items: *backend
 
+---
+
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: manbaclusters.configuration.manba.io
+spec:
+  group: configuration.manba.io
+  version: v1beta1
+  scope: Namespaced
+  names:
+    kind: ManbaCluster
+    plural: manbaclusters
+    shortNames:
+    - ms
+  validation:
+    openAPIV3Schema:
+      properties:
+        spec:
+          type: object
+          properties:
+            trafficPolicy: &trafficPolicy
+              type: object
+              properties:
+                loadBalancer:
+                  type: string
+                  enum:
+                  - RoundRobin
+                  - IPHash
+                maxQPS: &maxQPS
+                  type: integer
+                  minimum: 0
+                rateLimitOption:
+                  type: string
+                circuitBreaker: &circuitBreaker
+                  type: object
+                  properties:
+                    closeTimeout:
+                      type: integer
+                    halfTrafficRate:
+                      type: integer
+                    rateCheckPeriod:
+                      type: integer
+                    failureRateToClose:
+                      type: integer
+                    succeedRateToOpen:
+                      type: integer
+            subsets:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  labels:
+                    type: object
+                  trafficPolicy: *trafficPolicy 
+            

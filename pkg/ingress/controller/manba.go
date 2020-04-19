@@ -96,16 +96,17 @@ func (m *ManbaController) toStable(s *parser.ManbaState) *dump.ManbaRawState {
 	var ms dump.ManbaRawState
 	for _, api := range s.APIs {
 		a := api.API
-		path := api.IngressPath
+		path := api.HTTPRule
 
 		var proxies []dump.Proxy
-		for i, backend := range path.Backends {
+		for i, backend := range path.Route {
 			proxies = append(proxies, dump.Proxy{
 				// DispatchNode: ,
 				DispatchNode:     a.Nodes[i],
 				ServiceNamespace: api.Namespace,
-				ServiceName:      backend.ServiceName,
-				ServicePort:      backend.ServicePort,
+				ServiceName:      backend.Name,
+				ServiceSubSet:    backend.Subset,
+				ServicePort:      backend.Port,
 			})
 		}
 		ms.APIs = append(ms.APIs, &dump.API{

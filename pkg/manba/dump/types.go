@@ -50,10 +50,11 @@ type Proxy struct {
 
 	ServiceNamespace string
 	ServiceName      string
-	ServicePort      string
+	ServiceSubSet    string
+	ServicePort      uint32
 }
 
 // GetClusterName returns cluster name of dispatch node
 func (p *Proxy) GetClusterName() string {
-	return fmt.Sprintf("%s.%s.%s.svc", p.ServiceNamespace, p.ServiceName, p.ServicePort)
+	return fmt.Sprintf("%s.%s.%s.%d.svc", p.ServiceNamespace, p.ServiceName, p.ServiceSubSet, p.ServicePort)
 }

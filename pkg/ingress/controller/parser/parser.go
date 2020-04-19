@@ -5,7 +5,6 @@ import (
 	"reflect"
 	"sort"
 	"strconv"
-	"strings"
 
 	configurationv1beta1 "github.com/domgoer/manba-ingress/pkg/apis/configuration/v1beta1"
 
@@ -18,6 +17,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+)
+
+var (
+	// ErrClusterSubSetNotFound by name
+	ErrClusterSubSetNotFound = errors.New("cannot found cluster subset")
 )
 
 // Routing represents a Manba Routing and holds a reference to the Ingress
@@ -36,32 +40,29 @@ type Service struct {
 	APIs []API
 
 	Namespace string
-	Backend   configurationv1beta1.ManbaIngressBackend
-	Pods      []corev1.Pod
+	Backend   configurationv1beta1.ManbaCluster
 }
 
 // Cluster containers k8s service and manba cluster
 type Cluster struct {
 	metapb.Cluster
 
-	Servers        []Server
-	K8SService     corev1.Service
-	K8SServicePort string
+	Servers   []Server
+	Namespace string
+	K8SSbuSet configurationv1beta1.ManbaClusterSubSet
 }
 
 // Server contains k8s endpoint and manba server
 type Server struct {
 	metapb.Server
-
-	K8SPod corev1.Pod
 }
 
 // API contains manba API
 type API struct {
 	metapb.API
 
-	Namespace   string
-	IngressPath configurationv1beta1.ManbaIngressPath
+	Namespace string
+	HTTPRule  configurationv1beta1.ManbaHTTPRule
 }
 
 // Plugin implements manba Plugin
@@ -167,65 +168,72 @@ func (p *Parser) parseIngressRules(
 		ingress := *ingressList[i]
 		ingressSpec := ingress.Spec
 
-		for i, rule := range ingressSpec.Rules {
-			for j, path := range rule.Paths {
-				urlPattern := path.URLPattern
+		var apis []API
+
+		for j, rule := range ingressSpec.HTTP {
+			base := API{
+				API:       metapb.API{},
+				Namespace: ingress.Namespace,
+				HTTPRule:  rule,
+			}
+
+			base.fromManbaHTTPRule(&rule)
+
+			for k, match := range rule.Match {
+
+				api := base
+				urlPattern := match.URI.Pattern
 
 				if urlPattern == "" {
 					urlPattern = "/"
 				}
 
-				name := fmt.Sprintf("%s.%s.%d%d", ingress.Namespace, ingress.Name, i, j)
-				api := API{
-					API: metapb.API{
-						Name:   name,
-						Domain: rule.Host,
-					},
-					Namespace:   ingress.Namespace,
-					IngressPath: path,
+				api.Name = fmt.Sprintf("%s.%s.%d%d%d", ingress.Namespace, ingress.Name, i, j, k)
+				api.URLPattern = urlPattern
+				if match.Method != nil {
+					api.Method = *match.Method
+				} else {
+					api.Method = "*"
 				}
-				// TODO: set default value
 
-				api.fromManbaIngressPath(&path)
+				// append to list
+				apis = append(apis, api)
+			}
 
-				for _, backend := range path.Backends {
-					serviceName := fmt.Sprintf("%s.%s.%s.svc", ingress.Namespace, backend.ServiceName, backend.ServicePort)
+			for _, backend := range rule.Route {
+				serviceName := fmt.Sprintf("%s.%s.%s.%d.svc", ingress.Namespace, backend.Name, backend.Subset, backend.Port)
 
-					service, ok := serviceNameToServices[serviceName]
-					if !ok {
-						service = &Service{
-							Cluster: &Cluster{
-								Cluster: metapb.Cluster{
-									Name: serviceName,
-								},
-								K8SServicePort: backend.ServicePort,
+				service, ok := serviceNameToServices[serviceName]
+				if !ok {
+					cluster, err := p.store.GetManbaCluster(ingress.Namespace, backend.Name)
+					if err != nil {
+						glog.Errorf("getting manba cluster: %v", err)
+						continue
+					}
+					subSet, err := p.getClusterSubset(cluster.Spec.Subsets, backend.Subset)
+					if err != nil {
+						glog.Errorf("getting manba subset: %v", err)
+						continue
+					}
+
+					service = &Service{
+						Cluster: &Cluster{
+							Cluster: metapb.Cluster{
+								Name: serviceName,
 							},
 							Namespace: ingress.Namespace,
-							Backend:   backend,
-						}
+							K8SSbuSet: subSet,
+						},
+						Namespace: ingress.Namespace,
+						Backend:   *cluster,
 					}
-
-					service.APIs = append(service.APIs, api)
-
-					k8sSvc, err := p.store.GetService(service.Namespace, service.Backend.ServiceName)
-					if err != nil {
-						glog.Errorf("getting service: %v", err)
-					}
-					if k8sSvc != nil {
-						service.Cluster.K8SService = *k8sSvc
-					}
-
-					pods, err := p.store.GetPodsForService(service.Namespace, service.Backend.ServiceName)
-					if err != nil {
-						glog.Errorf("getting pods: %v", err)
-					}
-
-					service.Pods = pods
-
-					serviceNameToServices[serviceName] = service
 				}
 
+				service.APIs = append(service.APIs, apis...)
+
+				serviceNameToServices[serviceName] = service
 			}
+
 		}
 	}
 
@@ -234,43 +242,24 @@ func (p *Parser) parseIngressRules(
 	}, nil
 }
 
-func (p *Parser) fillServersFromPods(pods []corev1.Pod, svrs []Server) ([]Server, error) {
-	// key: pod ip
-	var podMap = make(map[string]corev1.Pod, len(pods))
-	for _, pod := range pods {
-		podMap[pod.Status.PodIP] = pod
-	}
-	var servers []Server
-	for _, svr := range svrs {
-		eip := strings.Split(svr.GetAddr(), ":")[0]
-		if p, ok := podMap[eip]; ok {
-			anns := p.GetAnnotations()
-			svr.MaxQPS = annotations.ExtractMaxQPS(anns)
-			svr.CircuitBreaker = annotations.ExtractCircuitBreaker(anns)
-		}
-		servers = append(servers, svr)
-	}
-	return servers, nil
-}
-
 func (p *Parser) fillOverride(service *Service) error {
-	svcKey := service.Namespace + "/" + service.Backend.ServiceName
-
-	var err error
-	service.Servers, err = p.getServiceEndpoints(service.Cluster.K8SService, service.Backend.ServicePort)
-	if err != nil {
-		glog.Errorf("error getting endpoints for '%v' service: %v",
-			svcKey, err)
-	}
-
-	service.Servers, err = p.fillServersFromPods(service.Pods, service.Servers)
-	if err != nil {
-		glog.Errorf("error fill servers for '%v' service: %v",
-			svcKey, err)
-	}
-
-	anns := service.Cluster.K8SService.Annotations
-	overrideCluster(service.Cluster, anns)
+	// svcKey := service.Namespace + "/" + service.Backend.ServiceName
+	//
+	// var err error
+	// service.Servers, err = p.getServiceEndpoints(service.Cluster.K8SService, service.Backend.ServicePort)
+	// if err != nil {
+	// 	glog.Errorf("error getting endpoints for '%v' service: %v",
+	// 		svcKey, err)
+	// }
+	//
+	// service.Servers, err = p.fillServersFromPods(service.Pods, service.Servers)
+	// if err != nil {
+	// 	glog.Errorf("error fill servers for '%v' service: %v",
+	// 		svcKey, err)
+	// }
+	//
+	// anns := service.Cluster.K8SService.Annotations
+	// overrideCluster(service.Cluster, anns)
 
 	return nil
 }
@@ -441,46 +430,31 @@ func (p *Parser) getManbaIngressFromIngress(ingress *networkingv1beta1.Ingress) 
 	return p.store.GetManbaIngress(ingress.Namespace, ingress.Name)
 }
 
-func (p *Parser) getPodsFromService(service Service) ([]corev1.Pod, error) {
-	return p.store.GetPodsForService(service.Namespace, service.Cluster.K8SService.Name)
+func (p *Parser) getClusterSubset(list []configurationv1beta1.ManbaClusterSubSet, subset string) (res configurationv1beta1.ManbaClusterSubSet, err error) {
+	for _, data := range list {
+		if data.Name == subset {
+			res = data
+			return
+		}
+	}
+	err = ErrClusterSubSetNotFound
+	return
 }
 
-func (a *API) fromManbaIngressPath(path *configurationv1beta1.ManbaIngressPath) {
+func (a *API) fromManbaHTTPRule(rule *configurationv1beta1.ManbaHTTPRule) {
 	if a == nil {
 		a = &API{}
 	}
 
 	meta := a.API
-	meta.Method = path.Method
-	meta.URLPattern = path.URLPattern
-	meta.Status = metapb.Status(metapb.Status_value[path.Status])
-	meta.DefaultValue = path.DefaultValue
-	meta.Perms = path.Perms
-	meta.AuthFilter = path.AuthFilter
-	meta.RenderTemplate = path.RenderTemplate
-	meta.UseDefault = path.UseDefault
-	meta.MatchRule = metapb.MatchRule(metapb.MatchRule_value[path.MatchRule])
-	meta.Position = path.Position
-	meta.Tags = path.Tags
-	meta.WebSocketOptions = path.WebSocketOptions
+	meta.DefaultValue = rule.DefaultValue
+	meta.RenderTemplate = rule.RenderTemplate
+	if rule.AuthFilter != nil {
+		meta.AuthFilter = *rule.AuthFilter
+	}
 	// meta.MaxQPS = path.MaxQPS
 	// meta.CircuitBreaker = path.CircuitBreaker
 	// meta.RateLimitOption = path.RateLimitOption
-
-	for _, backend := range path.Backends {
-		meta.Nodes = append(meta.Nodes, &metapb.DispatchNode{
-			URLRewrite:    backend.URLRewrite,
-			AttrName:      backend.AttrName,
-			Validations:   backend.Validations,
-			Cache:         backend.Cache,
-			DefaultValue:  backend.DefaultValue,
-			UseDefault:    backend.UseDefault,
-			BatchIndex:    backend.BatchIndex,
-			RetryStrategy: backend.RetryStrategy,
-			WriteTimeout:  backend.WriteTimeout,
-			ReadTimeout:   backend.ReadTimeout,
-		})
-	}
 
 	a.API = meta
 

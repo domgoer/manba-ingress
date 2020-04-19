@@ -1,0 +1,77 @@
+apiVersion: configuration.manba.io/v1beta1
+kind: ManbaCluster
+metadata:
+  name: my-cluster
+  namespace: default
+spec:
+  trafficPolicy:
+    loadBalancer: RoundRobin
+    maxQPS: 100
+    circuitBreaker:
+      closeTimeout: 500
+      halfTrafficRate: 50
+      rateCheckPeriod: 30
+      failureRateToClose: 50
+      succeedRateToOpen: 50
+  subsets:
+  - name: v1
+    labels:
+      version: v1
+    trafficPolicy:
+      loadBalancer: IPHash
+      maxQPS: 500
+      circuitBreaker:
+        closeTimeout: 500
+        halfTrafficRate: 50
+        rateCheckPeriod: 30
+        failureRateToClose: 50
+        succeedRateToOpen: 50
+  - name: v2
+    labels:
+      version: v2
+
+---
+
+apiVersion: configuration.manba.io/v1beta1
+kind: ManbaIngress
+metadata:
+  name: my-api
+  namespace: default
+spec:
+  hosts:
+  - blog.domgoer.io
+  - domgoer.github.io
+  http:
+  - match:
+    - uri:
+        pattern: /
+      method: GET
+    rewrite:
+      uri: /a
+    accessControl:
+      blacklist:
+      - 1.1.1.1
+      whitelist:
+      - 2.2.2.2
+    retries:
+      interval: 500
+      maxTimes: 3
+      codes:
+      - 500
+      - 409
+    route:
+    - cluster:
+        name: my-cluster
+        port: 8000
+        subset: v1
+    - cluster:
+        name: my-cluster
+        port: 8000
+        subset: v2
+    renderTemplate:
+      objects:  
+      - name: test
+        attrs:
+        - name: test
+          extractExp: test
+        flatAttrs: true

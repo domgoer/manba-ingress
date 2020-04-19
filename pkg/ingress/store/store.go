@@ -27,8 +27,8 @@ const (
 type Store interface {
 	GetEndpointsForService(namespace, name string) (*corev1.Endpoints, error)
 	GetService(namespace, name string) (*corev1.Service, error)
-	GetPodsForService(namespace, name string) ([]corev1.Pod, error)
 	GetManbaIngress(namespace, name string) (*configurationv1beta1.ManbaIngress, error)
+	GetManbaCluster(namespace, name string) (*configurationv1beta1.ManbaCluster, error)
 	ListManbaIngresses() []*configurationv1beta1.ManbaIngress
 }
 
@@ -119,6 +119,18 @@ func (s *store) GetManbaIngress(namespace, name string) (*configurationv1beta1.M
 		return nil, fmt.Errorf("ManbaIngress %v was not found", key)
 	}
 	return p.(*configurationv1beta1.ManbaIngress), nil
+}
+
+func (s *store) GetManbaCluster(namespace, name string) (*configurationv1beta1.ManbaCluster, error) {
+	key := fmt.Sprintf("%s/%s", namespace, name)
+	p, exist, err := s.getStore(mi).GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exist {
+		return nil, fmt.Errorf("ManbaCluster %v was not found", key)
+	}
+	return p.(*configurationv1beta1.ManbaCluster), nil
 }
 
 // New creates a new object store to be used in the ingress controller
