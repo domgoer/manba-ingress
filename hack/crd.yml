@@ -17,10 +17,6 @@ spec:
         spec:
           type: object
           properties:
-            hosts:
-              type: array
-              items:
-                type: string
             http:
               type: array
               items:
@@ -31,18 +27,31 @@ spec:
                     items:
                       type: object
                       properties:
-                        uri:
-                          type: object
-                          properties:
-                            pattern:
-                              type: string
-                        method: &method
+                        host:
                           type: string
-                          enum:
-                          - GET
-                          - POST
-                          - PUT
-                          - DELETE
+                        rules:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              matchType:
+                                type: string
+                                enum:
+                                  - all
+                                  - any
+                                  - default
+                              uri:
+                                type: object
+                                properties:
+                                  pattern:
+                                    type: string
+                              method: &method
+                                type: string
+                                enum:
+                                - GET
+                                - POST
+                                - PUT
+                                - DELETE
                   rewrite:
                     type: object
                     properties:
@@ -207,4 +216,3 @@ spec:
                   labels:
                     type: object
                   trafficPolicy: *trafficPolicy 
-            

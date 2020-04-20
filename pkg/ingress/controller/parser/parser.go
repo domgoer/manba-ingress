@@ -171,6 +171,7 @@ func (p *Parser) parseIngressRules(
 		var apis []API
 
 		for j, rule := range ingressSpec.HTTP {
+
 			base := API{
 				API:       metapb.API{},
 				Namespace: ingress.Namespace,
@@ -181,36 +182,48 @@ func (p *Parser) parseIngressRules(
 
 			for k, match := range rule.Match {
 
-				api := base
-				urlPattern := match.URI.Pattern
+				for g, rule := range match.Rules {
 
-				if urlPattern == "" {
-					urlPattern = "/"
+					api := base
+					api.Name = fmt.Sprintf("%s.%s.%d%d%d%d", ingress.Namespace, ingress.Name, i, j, k, g)
+					api.Domain = match.Host
+					api.MatchRule = metapb.MatchRule(metapb.MatchRule_value[rule.MatchType])
+					api.Position = uint32(g + 1)
+					api.Status = metapb.Up
+
+					urlPattern := rule.URI.Pattern
+					if urlPattern == "" {
+						urlPattern = "/"
+					}
+					api.URLPattern = urlPattern
+
+					if rule.Method != nil {
+						api.Method = *rule.Method
+					} else {
+						api.Method = "*"
+					}
+
+					// append to list
+					apis = append(apis, api)
+
 				}
 
-				api.Name = fmt.Sprintf("%s.%s.%d%d%d", ingress.Namespace, ingress.Name, i, j, k)
-				api.URLPattern = urlPattern
-				if match.Method != nil {
-					api.Method = *match.Method
-				} else {
-					api.Method = "*"
-				}
-
-				// append to list
-				apis = append(apis, api)
 			}
 
 			for _, backend := range rule.Route {
-				serviceName := fmt.Sprintf("%s.%s.%s.%d.svc", ingress.Namespace, backend.Name, backend.Subset, backend.Port)
+
+				cls := backend.Cluster
+
+				serviceName := fmt.Sprintf("%s.%s.%s.%d.svc", ingress.Namespace, cls.Name, cls.Subset, cls.Port)
 
 				service, ok := serviceNameToServices[serviceName]
 				if !ok {
-					cluster, err := p.store.GetManbaCluster(ingress.Namespace, backend.Name)
+					cluster, err := p.store.GetManbaCluster(ingress.Namespace, cls.Name)
 					if err != nil {
 						glog.Errorf("getting manba cluster: %v", err)
 						continue
 					}
-					subSet, err := p.getClusterSubset(cluster.Spec.Subsets, backend.Subset)
+					subSet, err := p.getClusterSubset(cluster.Spec.Subsets, cls.Subset)
 					if err != nil {
 						glog.Errorf("getting manba subset: %v", err)
 						continue

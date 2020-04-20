@@ -18,6 +18,14 @@ limitations under the License.
 
 package v1beta1
 
+// ManbaClusterListerExpansion allows custom methods to be added to
+// ManbaClusterLister.
+type ManbaClusterListerExpansion interface{}
+
+// ManbaClusterNamespaceListerExpansion allows custom methods to be added to
+// ManbaClusterNamespaceLister.
+type ManbaClusterNamespaceListerExpansion interface{}
+
 // ManbaIngressListerExpansion allows custom methods to be added to
 // ManbaIngressLister.
 type ManbaIngressListerExpansion interface{}

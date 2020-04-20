@@ -34,8 +34,7 @@ type ManbaIngressList struct {
 
 // ManbaIngressSpec api list
 type ManbaIngressSpec struct {
-	Hosts []string        `json:"hosts,omitempty"`
-	HTTP  []ManbaHTTPRule `json:"https,omitempty"`
+	HTTP []ManbaHTTPRule `json:"http,omitempty"`
 	// TLS   []networkingv1beta1.IngressTLS `json:"tls,omitempty"`
 }
 
@@ -49,12 +48,18 @@ type ManbaHTTPRule struct {
 	RenderTemplate  *metapb.RenderTemplate  `json:"renderTemplate,omitempty"`
 	AuthFilter      *string                 `json:"authFilter,omitempty"`
 	TrafficPolicy   *TrafficPolicy          `json:"trafficPolicy,omitempty"`
-	Route           []ManbaHTTPRoute        `json:"paths,omitempty"`
+	Route           []ManbaHTTPRoute        `json:"route,omitempty"`
 }
 
 type ManbaHTTPMatch struct {
-	URI    ManbaHTTPURIMatch `json:"uri,omitempty"`
-	Method *string           `json:"method,omitempty"`
+	Host  string               `json:"host,omitempty"`
+	Rules []MatchHTTPMatchRule `json:"rules,omitempty"`
+}
+
+type MatchHTTPMatchRule struct {
+	URI       ManbaHTTPURIMatch `json:"uri,omitempty"`
+	Method    *string           `json:"method,omitempty"`
+	MatchType string            `json:"match_type,omitempty"`
 }
 
 type ManbaHTTPURIMatch struct {
@@ -73,10 +78,18 @@ func (m *ManbaHTTPURIRewrite) GetURI() string {
 }
 
 type ManbaHTTPRoute struct {
-	Name   string `json:"name"`
-	Subset string `json:"subset"`
-	Port   uint32 `json:"port"`
+	Cluster ManbaHTTPRouteCluster `json:"cluster,omitempty"`
 }
+
+type ManbaHTTPRouteCluster struct {
+	Name   string `json:"name,omitempty"`
+	Subset string `json:"subset,omitempty"`
+	Port   uint32 `json:"port,omitempty"`
+}
+
+// +genclient
+// +genclient:noStatus
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // ManbaCluster is top level of manba cluster
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

@@ -28,6 +28,10 @@ type FakeConfigurationV1beta1 struct {
 	*testing.Fake
 }
 
+func (c *FakeConfigurationV1beta1) ManbaClusters(namespace string) v1beta1.ManbaClusterInterface {
+	return &FakeManbaClusters{c, namespace}
+}
+
 func (c *FakeConfigurationV1beta1) ManbaIngresses(namespace string) v1beta1.ManbaIngressInterface {
 	return &FakeManbaIngresses{c, namespace}
 }

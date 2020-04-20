@@ -26,12 +26,17 @@ import (
 
 type ConfigurationV1beta1Interface interface {
 	RESTClient() rest.Interface
+	ManbaClustersGetter
 	ManbaIngressesGetter
 }
 
 // ConfigurationV1beta1Client is used to interact with features provided by the configuration.manba.io group.
 type ConfigurationV1beta1Client struct {
 	restClient rest.Interface
+}
+
+func (c *ConfigurationV1beta1Client) ManbaClusters(namespace string) ManbaClusterInterface {
+	return newManbaClusters(c, namespace)
 }
 
 func (c *ConfigurationV1beta1Client) ManbaIngresses(namespace string) ManbaIngressInterface {

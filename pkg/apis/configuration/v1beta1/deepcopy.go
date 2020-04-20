@@ -2,6 +2,7 @@ package v1beta1
 
 import (
 	"encoding/json"
+
 	"github.com/golang/glog"
 )
 
@@ -20,10 +21,8 @@ func (in *ManbaIngress) DeepCopyInto(out *ManbaIngress) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
 	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
-	if in.Spec != nil {
-		in, out := in.Spec, out.Spec
-		deepcopy(in, out)
-	}
+	inSpec, outSpec := in.Spec, out.Spec
+	deepcopy(inSpec, outSpec)
 }
 
 func deepcopy(in, out interface{}) {

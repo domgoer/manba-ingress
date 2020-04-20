@@ -53,6 +53,8 @@ func (f *genericInformer) Lister() cache.GenericLister {
 func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource) (GenericInformer, error) {
 	switch resource {
 	// Group=configuration.manba.io, Version=v1beta1
+	case v1beta1.SchemeGroupVersion.WithResource("manbaclusters"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Configuration().V1beta1().ManbaClusters().Informer()}, nil
 	case v1beta1.SchemeGroupVersion.WithResource("manbaingresses"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Configuration().V1beta1().ManbaIngresses().Informer()}, nil
 

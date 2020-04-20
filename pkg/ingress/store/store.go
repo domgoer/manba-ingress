@@ -20,6 +20,7 @@ const (
 	ep  = "endpoint"
 	svc = "service"
 	mi  = "manbaIng"
+	mc  = "manbaCluster"
 )
 
 // Store is the interface that wraps the required methods to gather information
@@ -123,7 +124,7 @@ func (s *store) GetManbaIngress(namespace, name string) (*configurationv1beta1.M
 
 func (s *store) GetManbaCluster(namespace, name string) (*configurationv1beta1.ManbaCluster, error) {
 	key := fmt.Sprintf("%s/%s", namespace, name)
-	p, exist, err := s.getStore(mi).GetByKey(key)
+	p, exist, err := s.getStore(mc).GetByKey(key)
 	if err != nil {
 		return nil, err
 	}
