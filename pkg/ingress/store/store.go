@@ -28,6 +28,7 @@ const (
 type Store interface {
 	GetEndpointsForService(namespace, name string) (*corev1.Endpoints, error)
 	GetService(namespace, name string) (*corev1.Service, error)
+	ListServices(namespace string, label map[string]string) ([]*corev1.Service, error)
 	GetManbaIngress(namespace, name string) (*configurationv1beta1.ManbaIngress, error)
 	GetManbaCluster(namespace, name string) (*configurationv1beta1.ManbaCluster, error)
 	ListManbaIngresses() []*configurationv1beta1.ManbaIngress
@@ -36,7 +37,12 @@ type Store interface {
 type store struct {
 	client             kubernetes.Interface
 	getStore           func(string) cache.Store
+	getInformer        func(string) cache.SharedIndexInformer
 	isValidIngresClass func(objectMeta *metav1.ObjectMeta) bool
+}
+
+func (s *store) ListServices(namespace string, label map[string]string) ([]*corev1.Service, error) {
+	s.getInformer(svc)
 }
 
 var ingressConversionScheme *runtime.Scheme

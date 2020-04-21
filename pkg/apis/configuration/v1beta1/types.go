@@ -4,6 +4,7 @@ import (
 	"github.com/fagongzi/gateway/pkg/pb/metapb"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 // +genclient
@@ -84,7 +85,7 @@ type ManbaHTTPRoute struct {
 type ManbaHTTPRouteCluster struct {
 	Name   string `json:"name,omitempty"`
 	Subset string `json:"subset,omitempty"`
-	Port   uint32 `json:"port,omitempty"`
+	Port   intstr.IntOrString `json:"port,omitempty"`
 }
 
 // +genclient

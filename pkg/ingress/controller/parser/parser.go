@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+	"math"
 	"reflect"
 	"sort"
 	"strconv"
@@ -48,6 +49,7 @@ type Cluster struct {
 	metapb.Cluster
 
 	Servers   []Server
+	Port      string
 	Namespace string
 	K8SSbuSet configurationv1beta1.ManbaClusterSubSet
 }
@@ -229,11 +231,16 @@ func (p *Parser) parseIngressRules(
 						continue
 					}
 
+					if subSet.TrafficPolicy == nil {
+						subSet.TrafficPolicy = cluster.Spec.TrafficPolicy
+					}
+
 					service = &Service{
 						Cluster: &Cluster{
 							Cluster: metapb.Cluster{
 								Name: serviceName,
 							},
+							Port:      cls.Port.String(),
 							Namespace: ingress.Namespace,
 							K8SSbuSet: subSet,
 						},
@@ -256,6 +263,34 @@ func (p *Parser) parseIngressRules(
 }
 
 func (p *Parser) fillOverride(service *Service) error {
+	cls := service.Cluster
+	namespace := cls.Namespace
+
+	// fill servers
+	servers, err := p.getServiceEndpoints(cls.K8SSbuSet, namespace, cls.Port)
+	if err != nil {
+		return err
+	}
+
+	qps := math.MaxUint64
+	traffic := cls.K8SSbuSet.TrafficPolicy
+	if len(servers) != 0 && traffic != nil {
+		qps = int(traffic.MaxQPS) / len(servers)
+
+		for _, svr := range servers {
+			svr.CircuitBreaker = traffic.CircuitBreaker
+			svr.MaxQPS = int64(qps)
+		}
+
+		// fill cluster
+		if traffic.LoadBalancer != nil {
+			service.Cluster.LoadBalance = metapb.LoadBalance(metapb.LoadBalance_value[*traffic.LoadBalancer])
+		}
+
+	}
+
+	service.Servers = servers
+
 	// svcKey := service.Namespace + "/" + service.Backend.ServiceName
 	//
 	// var err error
@@ -277,57 +312,66 @@ func (p *Parser) fillOverride(service *Service) error {
 	return nil
 }
 
-func (p *Parser) getServiceEndpoints(svc corev1.Service,
+func (p *Parser) getServiceEndpoints(subset configurationv1beta1.ManbaClusterSubSet, namespace string,
 	backendPort string) ([]Server, error) {
 	var servers []Server
 	var endpoints []utils.Endpoint
-	var servicePort corev1.ServicePort
-	svcKey := svc.Namespace + "/" + svc.Name
-
-	for _, port := range svc.Spec.Ports {
-		// targetPort could be a string, use the name or the port (int)
-		if strconv.Itoa(int(port.Port)) == backendPort ||
-			port.TargetPort.String() == backendPort ||
-			port.Name == backendPort {
-			servicePort = port
-			break
-		}
+	svcs, err := p.store.ListServices(namespace, subset.Labels)
+	if err != nil {
+		return nil, err
 	}
 
-	// Ingress with an ExternalName service and no port defined in the service.
-	if len(svc.Spec.Ports) == 0 &&
-		svc.Spec.Type == corev1.ServiceTypeExternalName {
-		externalPort, err := strconv.Atoi(backendPort)
-		if err != nil {
-			glog.Warningf("only numeric ports are allowed in"+
-				" ExternalName services: %v is not valid as a TCP/UDP port",
-				backendPort)
-			return servers, nil
+	for _, svc := range svcs {
+		var servicePort corev1.ServicePort
+
+		svcKey := svc.Namespace + "/" + svc.Name
+
+		for _, port := range svc.Spec.Ports {
+			// targetPort could be a string, use the name or the port (int)
+			if strconv.Itoa(int(port.Port)) == backendPort ||
+				port.TargetPort.String() == backendPort ||
+				port.Name == backendPort {
+				servicePort = port
+				break
+			}
 		}
 
-		servicePort = corev1.ServicePort{
-			Protocol:   corev1.ProtocolTCP,
-			Port:       int32(externalPort),
-			TargetPort: intstr.FromString(backendPort),
-		}
-	}
+		// Ingress with an ExternalName service and no port defined in the service.
+		if len(svc.Spec.Ports) == 0 &&
+			svc.Spec.Type == corev1.ServiceTypeExternalName {
+			externalPort, err := strconv.Atoi(backendPort)
+			if err != nil {
+				glog.Warningf("only numeric ports are allowed in"+
+					" ExternalName services: %v is not valid as a TCP/UDP port",
+					backendPort)
+				return servers, nil
+			}
 
-	endpoints = getEndpoints(&svc, &servicePort,
-		corev1.ProtocolTCP, p.store.GetEndpointsForService)
-	if len(endpoints) == 0 {
-		glog.Warningf("service %v does not have any active endpoints",
-			svcKey)
-	}
-	for _, endpoint := range endpoints {
-		if endpoint.Port != backendPort {
-			continue
+			servicePort = corev1.ServicePort{
+				Protocol:   corev1.ProtocolTCP,
+				Port:       int32(externalPort),
+				TargetPort: intstr.FromString(backendPort),
+			}
 		}
-		server := Server{
-			Server: metapb.Server{
-				Addr: endpoint.String(),
-			},
+
+		endpoints = getEndpoints(svc, &servicePort,
+			corev1.ProtocolTCP, p.store.GetEndpointsForService)
+		if len(endpoints) == 0 {
+			glog.Warningf("service %v does not have any active endpoints",
+				svcKey)
 		}
-		servers = append(servers, server)
+		for _, endpoint := range endpoints {
+			if endpoint.Port != backendPort {
+				continue
+			}
+			server := Server{
+				Server: metapb.Server{
+					Addr: endpoint.String(),
+				},
+			}
+			servers = append(servers, server)
+		}
+
 	}
 	return servers, nil
 }
