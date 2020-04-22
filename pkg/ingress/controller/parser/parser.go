@@ -36,7 +36,7 @@ type Routing struct {
 // Service contains k8s service and manba cluster
 type Service struct {
 	Cluster *Cluster
-	Servers []Server
+	Servers []*Server
 
 	APIs []API
 
@@ -48,7 +48,7 @@ type Service struct {
 type Cluster struct {
 	metapb.Cluster
 
-	Servers   []Server
+	Servers   []*Server
 	Port      string
 	Namespace string
 	K8SSbuSet configurationv1beta1.ManbaClusterSubSet
@@ -146,7 +146,9 @@ func (p *Parser) Build() (*ManbaState, error) {
 
 		for _, server := range service.Servers {
 			if check(server.Addr) {
-				state.Servers = append(state.Servers, service.Servers...)
+				for _ , svr := range service.Servers {
+					state.Servers = append(state.Servers, *svr)
+				}
 			}
 		}
 
@@ -216,7 +218,7 @@ func (p *Parser) parseIngressRules(
 
 				cls := backend.Cluster
 
-				serviceName := fmt.Sprintf("%s.%s.%s.%d.svc", ingress.Namespace, cls.Name, cls.Subset, cls.Port)
+				serviceName := fmt.Sprintf("%s.%s.%s.%s.svc", ingress.Namespace, cls.Name, cls.Subset, cls.Port.String())
 
 				service, ok := serviceNameToServices[serviceName]
 				if !ok {
@@ -272,7 +274,7 @@ func (p *Parser) fillOverride(service *Service) error {
 		return err
 	}
 
-	qps := math.MaxUint64
+	qps := math.MaxInt32
 	traffic := cls.K8SSbuSet.TrafficPolicy
 	if len(servers) != 0 && traffic != nil {
 		qps = int(traffic.MaxQPS) / len(servers)
@@ -313,8 +315,8 @@ func (p *Parser) fillOverride(service *Service) error {
 }
 
 func (p *Parser) getServiceEndpoints(subset configurationv1beta1.ManbaClusterSubSet, namespace string,
-	backendPort string) ([]Server, error) {
-	var servers []Server
+	backendPort string) ([]*Server, error) {
+	var servers []*Server
 	var endpoints []utils.Endpoint
 	svcs, err := p.store.ListServices(namespace, subset.Labels)
 	if err != nil {
@@ -344,6 +346,7 @@ func (p *Parser) getServiceEndpoints(subset configurationv1beta1.ManbaClusterSub
 				glog.Warningf("only numeric ports are allowed in"+
 					" ExternalName services: %v is not valid as a TCP/UDP port",
 					backendPort)
+
 				return servers, nil
 			}
 
@@ -360,6 +363,7 @@ func (p *Parser) getServiceEndpoints(subset configurationv1beta1.ManbaClusterSub
 			glog.Warningf("service %v does not have any active endpoints",
 				svcKey)
 		}
+
 		for _, endpoint := range endpoints {
 			if endpoint.Port != backendPort {
 				continue
@@ -369,7 +373,7 @@ func (p *Parser) getServiceEndpoints(subset configurationv1beta1.ManbaClusterSub
 					Addr: endpoint.String(),
 				},
 			}
-			servers = append(servers, server)
+			servers = append(servers, &server)
 		}
 
 	}

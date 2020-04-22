@@ -15,6 +15,13 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
+var (
+	// Factory to list services and eps
+	Factory informers.SharedInformerFactory
+	// ManbaFactory to list manbaIngress and manbaCluster
+	ManbaFactory configurationinformer.SharedInformerFactory
+)
+
 // CreateInformers creates ingress, ep, svc, manbaIngress and pods' informers
 func CreateInformers(k8sCli kubernetes.Interface, cfg *rest.Config, syncPeriod time.Duration, namespace, ingressClass string, updateChannel *channels.RingChannel) []cache.SharedIndexInformer {
 	reh := controller.ResourceEventHandler{
@@ -22,38 +29,34 @@ func CreateInformers(k8sCli kubernetes.Interface, cfg *rest.Config, syncPeriod t
 		IsValidIngresClass: annotations.IngressClassValidatorFunc(ingressClass),
 	}
 
-	informerFactory := informers.NewSharedInformerFactoryWithOptions(
+	Factory = informers.NewSharedInformerFactoryWithOptions(
 		k8sCli,
 		syncPeriod,
 		informers.WithNamespace(namespace),
 	)
 
 	confClient, _ := configurationclientv1.NewForConfig(cfg)
-	manbaInformerFactory := configurationinformer.NewSharedInformerFactoryWithOptions(confClient, syncPeriod, configurationinformer.WithNamespace(namespace))
+	ManbaFactory = configurationinformer.NewSharedInformerFactoryWithOptions(confClient, syncPeriod, configurationinformer.WithNamespace(namespace))
 
 	var informers []cache.SharedIndexInformer
 
 	// create endpoint informer
-	epInformer := informerFactory.Core().V1().Endpoints().Informer()
-	storesMap["endpoint"] = epInformer.GetStore()
+	epInformer := Factory.Core().V1().Endpoints().Informer()
 	epInformer.AddEventHandler(controller.EndpointsEventHandler{
 		UpdateCh: updateChannel,
 	})
 	informers = append(informers, epInformer)
 
 	// create service informer
-	svcInformer := informerFactory.Core().V1().Services().Informer()
-	storesMap["service"] = svcInformer.GetStore()
+	svcInformer := Factory.Core().V1().Services().Informer()
 	svcInformer.AddEventHandler(reh)
 	informers = append(informers, svcInformer)
 
-	manbaIngInformer := manbaInformerFactory.Configuration().V1beta1().ManbaIngresses().Informer()
-	storesMap["manbaIng"] = manbaIngInformer.GetStore()
+	manbaIngInformer := ManbaFactory.Configuration().V1beta1().ManbaIngresses().Informer()
 	manbaIngInformer.AddEventHandler(reh)
 	informers = append(informers, manbaIngInformer)
 
-	manbaClusterInformer := manbaInformerFactory.Configuration().V1beta1().ManbaClusters().Informer()
-	storesMap["manbaCluster"] = manbaClusterInformer.GetStore()
+	manbaClusterInformer := ManbaFactory.Configuration().V1beta1().ManbaClusters().Informer()
 	manbaClusterInformer.AddEventHandler(reh)
 	informers = append(informers, manbaClusterInformer)
 

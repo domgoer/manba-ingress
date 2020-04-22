@@ -4,6 +4,11 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/domgoer/manba-ingress/pkg/client/informers/externalversions"
+
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/informers"
+
 	"github.com/golang/glog"
 	"k8s.io/apimachinery/pkg/runtime"
 
@@ -13,7 +18,6 @@ import (
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/cache"
 )
 
 const (
@@ -35,14 +39,15 @@ type Store interface {
 }
 
 type store struct {
-	client             kubernetes.Interface
-	getStore           func(string) cache.Store
-	getInformer        func(string) cache.SharedIndexInformer
+	client       kubernetes.Interface
+	factory      informers.SharedInformerFactory
+	manbaFactory externalversions.SharedInformerFactory
+
 	isValidIngresClass func(objectMeta *metav1.ObjectMeta) bool
 }
 
 func (s *store) ListServices(namespace string, label map[string]string) ([]*corev1.Service, error) {
-	s.getInformer(svc)
+	return s.factory.Core().V1().Services().Lister().Services(namespace).List(labels.SelectorFromSet(label))
 }
 
 var ingressConversionScheme *runtime.Scheme
@@ -55,7 +60,7 @@ func init() {
 
 func (s *store) GetEndpointsForService(namespace, name string) (*corev1.Endpoints, error) {
 	key := fmt.Sprintf("%v/%v", namespace, name)
-	eps, exists, err := s.getStore(ep).GetByKey(key)
+	eps, exists, err := s.factory.Core().V1().Endpoints().Informer().GetStore().GetByKey(key)
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +74,7 @@ func (s *store) GetEndpointsForService(namespace, name string) (*corev1.Endpoint
 func (s *store) ListManbaIngresses() []*configurationv1beta1.ManbaIngress {
 	// filter ingress rules
 	var ingresses []*configurationv1beta1.ManbaIngress
-	for _, item := range s.getStore(mi).List() {
+	for _, item := range s.manbaFactory.Configuration().V1beta1().ManbaIngresses().Informer().GetStore().List() {
 		ing, ok := item.(*configurationv1beta1.ManbaIngress)
 		if !ok {
 			glog.Warningf("invalid type for ingress, %v", item)
@@ -86,7 +91,7 @@ func (s *store) ListManbaIngresses() []*configurationv1beta1.ManbaIngress {
 
 func (s *store) GetService(namespace, name string) (*corev1.Service, error) {
 	key := fmt.Sprintf("%v/%v", namespace, name)
-	service, exists, err := s.getStore(svc).GetByKey(key)
+	service, exists, err := s.factory.Core().V1().Services().Informer().GetStore().GetByKey(key)
 	if err != nil {
 		return nil, err
 	}
@@ -118,7 +123,7 @@ func (s *store) GetPodsForService(namespace, name string) ([]corev1.Pod, error) 
 
 func (s *store) GetManbaIngress(namespace, name string) (*configurationv1beta1.ManbaIngress, error) {
 	key := fmt.Sprintf("%v/%v", namespace, name)
-	p, exist, err := s.getStore(mi).GetByKey(key)
+	p, exist, err := s.manbaFactory.Configuration().V1beta1().ManbaIngresses().Informer().GetStore().GetByKey(key)
 	if err != nil {
 		return nil, err
 	}
@@ -130,7 +135,7 @@ func (s *store) GetManbaIngress(namespace, name string) (*configurationv1beta1.M
 
 func (s *store) GetManbaCluster(namespace, name string) (*configurationv1beta1.ManbaCluster, error) {
 	key := fmt.Sprintf("%s/%s", namespace, name)
-	p, exist, err := s.getStore(mc).GetByKey(key)
+	p, exist, err := s.manbaFactory.Configuration().V1beta1().ManbaClusters().Informer().GetStore().GetByKey(key)
 	if err != nil {
 		return nil, err
 	}
@@ -141,10 +146,11 @@ func (s *store) GetManbaCluster(namespace, name string) (*configurationv1beta1.M
 }
 
 // New creates a new object store to be used in the ingress controller
-func New(kc kubernetes.Interface, getStore func(string) cache.Store, isValidIngresClassFunc func(objectMeta *metav1.ObjectMeta) bool) Store {
+func New(kc kubernetes.Interface, factory informers.SharedInformerFactory, manbaFactory externalversions.SharedInformerFactory, isValidIngresClassFunc func(objectMeta *metav1.ObjectMeta) bool) Store {
 	return &store{
 		client:             kc,
-		getStore:           getStore,
+		factory:            factory,
+		manbaFactory:       manbaFactory,
 		isValidIngresClass: isValidIngresClassFunc,
 	}
 }

@@ -111,7 +111,7 @@ func main() {
 		runtime.HandleError(fmt.Errorf("Timed out waiting for caches to sync"))
 	}
 
-	s := store.New(kubeClient, cache2.GetStore, annotations.IngressClassValidatorFuncFromObjectMeta(controllerConfig.IngressClass))
+	s := store.New(kubeClient, cache2.Factory, cache2.ManbaFactory, annotations.IngressClassValidatorFuncFromObjectMeta(controllerConfig.IngressClass))
 	manbaController, err := controller.NewManbaController(controllerConfig, updateChannel, s)
 	if err != nil {
 		glog.Fatalf("create manba controller failed, err: %v", err)

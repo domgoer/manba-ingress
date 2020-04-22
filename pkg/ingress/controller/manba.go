@@ -107,7 +107,7 @@ func (m *ManbaController) toStable(s *parser.ManbaState) *dump.ManbaRawState {
 				ServiceNamespace: api.Namespace,
 				ServiceName:      cls.Name,
 				ServiceSubSet:    cls.Subset,
-				ServicePort:      cls.Port,
+				ServicePort:      cls.Port.String(),
 			})
 		}
 		ms.APIs = append(ms.APIs, &dump.API{

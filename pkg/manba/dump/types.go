@@ -51,7 +51,7 @@ type Proxy struct {
 	ServiceNamespace string
 	ServiceName      string
 	ServiceSubSet    string
-	ServicePort      uint32
+	ServicePort      string
 }
 
 // GetClusterName returns cluster name of dispatch node
