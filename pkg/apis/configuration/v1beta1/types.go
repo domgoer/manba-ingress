@@ -43,7 +43,7 @@ type ManbaIngressSpec struct {
 type ManbaHTTPRule struct {
 	Match           []ManbaHTTPMatch        `json:"match,omitempty"`
 	Rewrite         *ManbaHTTPURIRewrite    `json:"rewrite,omtiempty"`
-	IPAccessControl *metapb.IPAccessControl `json:"ipAccessControl,omitempty"`
+	IPAccessControl *metapb.IPAccessControl `json:"accessControl,omitempty"`
 	Retry           *metapb.RetryStrategy   `json:"retries,omitempty"`
 	DefaultValue    *metapb.HTTPResult      `json:"defaultValue,omitempty"`
 	RenderTemplate  *metapb.RenderTemplate  `json:"renderTemplate,omitempty"`
@@ -79,12 +79,20 @@ func (m *ManbaHTTPURIRewrite) GetURI() string {
 }
 
 type ManbaHTTPRoute struct {
-	Cluster ManbaHTTPRouteCluster `json:"cluster,omitempty"`
+	Cluster      ManbaHTTPRouteCluster `json:"cluster,omitempty"`
+	Rewrite      *ManbaHTTPURIRewrite  `json:"rewrite,omitempty"`
+	AttrName     string                `json:"attrName,omitempty"`
+	Validations  []*metapb.Validation  `json:"validations,omitempty"`
+	Cache        *metapb.Cache         `json:"cache,omitempty"`
+	BatchIndex   int32                 `json:"batchIndex,omitempty"`
+	DefaultValue *metapb.HTTPResult    `json:"default_value,omitempty"`
+	WriteTimeout int64                 `json:"writeTimeout,omitempty"`
+	ReadTimeout  int64                 `json:"readTimeout,omitempty"`
 }
 
 type ManbaHTTPRouteCluster struct {
-	Name   string `json:"name,omitempty"`
-	Subset string `json:"subset,omitempty"`
+	Name   string             `json:"name,omitempty"`
+	Subset string             `json:"subset,omitempty"`
 	Port   intstr.IntOrString `json:"port,omitempty"`
 }
 

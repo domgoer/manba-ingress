@@ -96,23 +96,10 @@ func (m *ManbaController) toStable(s *parser.ManbaState) *dump.ManbaRawState {
 	var ms dump.ManbaRawState
 	for _, api := range s.APIs {
 		a := api.API
-		path := api.HTTPRule
 
-		var proxies []dump.Proxy
-		for _, backend := range path.Route {
-			cls := backend.Cluster
-			proxies = append(proxies, dump.Proxy{
-				// DispatchNode: ,
-				// DispatchNode:     a.Nodes[i],
-				ServiceNamespace: api.Namespace,
-				ServiceName:      cls.Name,
-				ServiceSubSet:    cls.Subset,
-				ServicePort:      cls.Port.String(),
-			})
-		}
 		ms.APIs = append(ms.APIs, &dump.API{
 			API:     &a,
-			Proxies: proxies,
+			Proxies: api.Proxies,
 		})
 
 	}
@@ -235,14 +222,14 @@ func (m *ManbaController) setTargetsIDs(target *dump.ManbaRawState, current *sta
 				api.ID = a.GetID()
 			}
 		}
-		// var nodes []*metapb.DispatchNode
-		// for _, proxy := range api.Proxies {
-		// 	n := proxy.DispatchNode
-		// 	n.ClusterID = clusterNameIDsMap[proxy.GetClusterName()]
-		// 	nodes = append(nodes, n)
-		// }
-		//
-		// api.Nodes = nodes
+		var nodes []*metapb.DispatchNode
+		for _, proxy := range api.Proxies {
+			n := proxy.DispatchNode
+			n.ClusterID = clusterNameIDsMap[proxy.ClusterName]
+			nodes = append(nodes, &n)
+		}
+
+		api.Nodes = nodes
 	}
 
 	for _, routing := range target.Routings {

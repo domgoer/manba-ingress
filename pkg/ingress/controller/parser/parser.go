@@ -38,7 +38,7 @@ type Service struct {
 	Cluster *Cluster
 	Servers []*Server
 
-	APIs []API
+	APIs []*API
 
 	Namespace string
 	Backend   configurationv1beta1.ManbaCluster
@@ -64,6 +64,7 @@ type API struct {
 	metapb.API
 
 	Namespace string
+	Proxies   []Proxy
 	HTTPRule  configurationv1beta1.ManbaHTTPRule
 }
 
@@ -136,7 +137,7 @@ func (p *Parser) Build() (*ManbaState, error) {
 	for _, service := range parsedInfo.ServiceNameToServices {
 		for _, api := range service.APIs {
 			if check(api.Name) {
-				state.APIs = append(state.APIs, api)
+				state.APIs = append(state.APIs, *api)
 			}
 		}
 		service.Cluster.Servers = service.Servers
@@ -146,7 +147,7 @@ func (p *Parser) Build() (*ManbaState, error) {
 
 		for _, server := range service.Servers {
 			if check(server.Addr) {
-				for _ , svr := range service.Servers {
+				for _, svr := range service.Servers {
 					state.Servers = append(state.Servers, *svr)
 				}
 			}
@@ -172,7 +173,7 @@ func (p *Parser) parseIngressRules(
 		ingress := *ingressList[i]
 		ingressSpec := ingress.Spec
 
-		var apis []API
+		var apis []*API
 
 		for j, rule := range ingressSpec.HTTP {
 
@@ -208,7 +209,7 @@ func (p *Parser) parseIngressRules(
 					}
 
 					// append to list
-					apis = append(apis, api)
+					apis = append(apis, &api)
 
 				}
 
@@ -293,24 +294,20 @@ func (p *Parser) fillOverride(service *Service) error {
 
 	service.Servers = servers
 
-	// svcKey := service.Namespace + "/" + service.Backend.ServiceName
-	//
-	// var err error
-	// service.Servers, err = p.getServiceEndpoints(service.Cluster.K8SService, service.Backend.ServicePort)
-	// if err != nil {
-	// 	glog.Errorf("error getting endpoints for '%v' service: %v",
-	// 		svcKey, err)
-	// }
-	//
-	// service.Servers, err = p.fillServersFromPods(service.Pods, service.Servers)
-	// if err != nil {
-	// 	glog.Errorf("error fill servers for '%v' service: %v",
-	// 		svcKey, err)
-	// }
-	//
-	// anns := service.Cluster.K8SService.Annotations
-	// overrideCluster(service.Cluster, anns)
+	// fill api nodes
+	for _, api := range service.APIs {
+		rule := api.HTTPRule
+		for _, r := range api.HTTPRule.Route {
+			p := Proxy{
+				ClusterName: service.Cluster.Name,
+			}
 
+			p.fromManbaHTTPRule(&rule)
+			p.fromManbaManbaHTTPRoute(&r)
+
+			api.Proxies = append(api.Proxies, p)
+		}
+	}
 	return nil
 }
 
@@ -509,6 +506,10 @@ func (a *API) fromManbaHTTPRule(rule *configurationv1beta1.ManbaHTTPRule) {
 
 	meta := a.API
 	meta.DefaultValue = rule.DefaultValue
+	if meta.DefaultValue != nil {
+		meta.UseDefault = true
+	}
+	meta.IPAccessControl = rule.IPAccessControl
 	meta.RenderTemplate = rule.RenderTemplate
 	if rule.AuthFilter != nil {
 		meta.AuthFilter = *rule.AuthFilter
@@ -519,4 +520,31 @@ func (a *API) fromManbaHTTPRule(rule *configurationv1beta1.ManbaHTTPRule) {
 
 	a.API = meta
 
+}
+
+func (p *Proxy) fromManbaHTTPRule(rule *configurationv1beta1.ManbaHTTPRule) {
+	node := p.DispatchNode
+	if rule.Rewrite != nil {
+		node.URLRewrite = rule.Rewrite.URI
+	}
+	p.DispatchNode = node
+}
+
+func (p *Proxy) fromManbaManbaHTTPRoute(route *configurationv1beta1.ManbaHTTPRoute) {
+	node := p.DispatchNode
+	node.WriteTimeout = route.WriteTimeout
+	node.ReadTimeout = route.ReadTimeout
+	node.DefaultValue = route.DefaultValue
+	if node.DefaultValue != nil {
+		node.UseDefault = true
+	}
+	node.Cache = route.Cache
+	node.AttrName = route.AttrName
+	node.Validations = route.Validations
+	node.BatchIndex = route.BatchIndex
+
+	if node.URLRewrite == "" && route.Rewrite != nil {
+		node.URLRewrite = route.Rewrite.URI
+	}
+	p.DispatchNode = node
 }

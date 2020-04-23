@@ -1,8 +1,7 @@
 package dump
 
 import (
-	"fmt"
-
+	"github.com/domgoer/manba-ingress/pkg/ingress/controller/parser"
 	"github.com/fagongzi/gateway/pkg/pb/metapb"
 )
 
@@ -41,20 +40,5 @@ type Routing struct {
 type API struct {
 	*metapb.API
 
-	Proxies []Proxy
-}
-
-// Proxy ...
-type Proxy struct {
-	*metapb.DispatchNode
-
-	ServiceNamespace string
-	ServiceName      string
-	ServiceSubSet    string
-	ServicePort      string
-}
-
-// GetClusterName returns cluster name of dispatch node
-func (p *Proxy) GetClusterName() string {
-	return fmt.Sprintf("%s.%s.%s.%d.svc", p.ServiceNamespace, p.ServiceName, p.ServiceSubSet, p.ServicePort)
+	Proxies []parser.Proxy
 }
