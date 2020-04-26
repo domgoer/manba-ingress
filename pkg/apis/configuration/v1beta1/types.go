@@ -79,21 +79,63 @@ func (m *ManbaHTTPURIRewrite) GetURI() string {
 }
 
 type ManbaHTTPRoute struct {
-	Cluster      ManbaHTTPRouteCluster `json:"cluster,omitempty"`
-	Rewrite      *ManbaHTTPURIRewrite  `json:"rewrite,omitempty"`
-	AttrName     string                `json:"attrName,omitempty"`
-	Validations  []*metapb.Validation  `json:"validations,omitempty"`
-	Cache        *metapb.Cache         `json:"cache,omitempty"`
-	BatchIndex   int32                 `json:"batchIndex,omitempty"`
-	DefaultValue *metapb.HTTPResult    `json:"default_value,omitempty"`
-	WriteTimeout int64                 `json:"writeTimeout,omitempty"`
-	ReadTimeout  int64                 `json:"readTimeout,omitempty"`
+	Cluster      ManbaHTTPRouteCluster       `json:"cluster,omitempty"`
+	Rewrite      *ManbaHTTPURIRewrite        `json:"rewrite,omitempty"`
+	AttrName     string                      `json:"attrName,omitempty"`
+	Validations  []*ManbaHTTPRouteValidation `json:"validations,omitempty"`
+	Cache        *metapb.Cache               `json:"cache,omitempty"`
+	BatchIndex   int32                       `json:"batchIndex,omitempty"`
+	DefaultValue *metapb.HTTPResult          `json:"default_value,omitempty"`
+	WriteTimeout int64                       `json:"writeTimeout,omitempty"`
+	ReadTimeout  int64                       `json:"readTimeout,omitempty"`
 }
 
 type ManbaHTTPRouteCluster struct {
 	Name   string             `json:"name,omitempty"`
 	Subset string             `json:"subset,omitempty"`
 	Port   intstr.IntOrString `json:"port,omitempty"`
+}
+
+type ManbaHTTPRouteValidation struct {
+	Parameter ManbaHTTPRouteValidationParameter `json:"parameter"`
+	Required  bool                              `json:"required"`
+	Rules     []ManbaHTTPRouteValidationRule    `json:"rules"`
+}
+
+func (v *ManbaHTTPRouteValidation) ToManbaValidation() *metapb.Validation {
+	val := new(metapb.Validation)
+	val.Parameter = *v.Parameter.ToManbaParameter()
+	val.Required = v.Required
+	for _, r := range v.Rules {
+		val.Rules = append(val.Rules, *r.ToManbaValidationRule())
+	}
+	return val
+}
+
+type ManbaHTTPRouteValidationParameter struct {
+	Name   string `json:"name"`
+	Source string `json:"source"`
+	Index  int32  `json:"index"`
+}
+
+func (p *ManbaHTTPRouteValidationParameter) ToManbaParameter() *metapb.Parameter {
+	par := new(metapb.Parameter)
+	par.Index = p.Index
+	par.Name = p.Name
+	par.Source = metapb.Source(metapb.Source_value[p.Source])
+	return par
+}
+
+type ManbaHTTPRouteValidationRule struct {
+	RuleType   string `json:"ruleType"`
+	Expression string `json:"expression"`
+}
+
+func (r *ManbaHTTPRouteValidationRule) ToManbaValidationRule() *metapb.ValidationRule {
+	val := new(metapb.ValidationRule)
+	val.Expression = r.Expression
+	val.RuleType = metapb.RuleType(metapb.RuleType_value[r.RuleType])
+	return val
 }
 
 // +genclient

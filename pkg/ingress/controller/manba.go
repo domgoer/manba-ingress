@@ -97,9 +97,13 @@ func (m *ManbaController) toStable(s *parser.ManbaState) *dump.ManbaRawState {
 	for _, api := range s.APIs {
 		a := api.API
 
+		var proxies []parser.Proxy
+		for _, a := range api.Proxies {
+			proxies = append(proxies, a)
+		}
 		ms.APIs = append(ms.APIs, &dump.API{
 			API:     &a,
-			Proxies: api.Proxies,
+			Proxies: proxies,
 		})
 
 	}

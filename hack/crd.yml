@@ -52,7 +52,7 @@ spec:
                                 - POST
                                 - PUT
                                 - DELETE
-                  rewrite:
+                  rewrite: &rewrite
                     type: object
                     properties:
                       uri:
@@ -152,12 +152,87 @@ spec:
                     items:
                       type: object
                       properties:
-                        name:
+                        cluster:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                            subset:
+                              type: string
+                            port:
+                              type: integer
+                        rewrite: *rewrite
+                        attrName:
                           type: string
-                        subset:
-                          type: string
-                        port:
-                          type: integer
+                        validations:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              parameter:
+                                type: object
+                                properties: &parameter
+                                  name:
+                                    type: string
+                                  source:
+                                    type: string
+                                    enum:
+                                    - query
+                                    - formData
+                                    - jsonBody
+                                    - header
+                                    - cookie
+                                    - pathValue
+                                  required:
+                                    type: boolean
+                                  rules:
+                                    type: array
+                                    items:
+                                      type: object
+                                      properties:
+                                        ruleType:
+                                          type: string
+                                          enum:
+                                          - regexp
+                                        expression:
+                                          type: string
+                        cache:
+                          type: object
+                          properties:
+                            keys:
+                              type: array
+                              items:
+                                type: object
+                                properties: *parameter
+                            deadline:
+                              type: number
+                            conditions:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  parameter:
+                                    type: object
+                                    properties: *parameter
+                                  cmp:
+                                    type: string
+                                    enum:
+                                    - eq
+                                    - lt
+                                    - le
+                                    - gt
+                                    - ge
+                                    - in
+                                    - match
+                                  expect:
+                                    type: string
+                        batchIndex:
+                          type: number
+                        defaultValue: *defaultValue
+                        writeTimeout:
+                          type: number
+                        readTimeout:
+                          type: number
 
 ---
 

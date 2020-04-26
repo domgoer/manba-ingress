@@ -12,6 +12,11 @@ func (in *ManbaHTTPRule) DeepCopyInto(out *ManbaHTTPRule) {
 }
 
 // DeepCopyInto ...
+func (in *ManbaHTTPRoute) DeepCopyInto(out *ManbaHTTPRoute) {
+	deepcopy(in, out)
+}
+
+// DeepCopyInto ...
 func (in *TrafficPolicy) DeepCopyInto(out *TrafficPolicy) {
 	deepcopy(in, out)
 }

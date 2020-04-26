@@ -64,8 +64,9 @@ type API struct {
 	metapb.API
 
 	Namespace string
-	Proxies   []Proxy
-	HTTPRule  configurationv1beta1.ManbaHTTPRule
+	// Proxies key: clusterName, value: Proxy
+	Proxies  map[string]Proxy
+	HTTPRule configurationv1beta1.ManbaHTTPRule
 }
 
 // Plugin implements manba Plugin
@@ -305,7 +306,13 @@ func (p *Parser) fillOverride(service *Service) error {
 			p.fromManbaHTTPRule(&rule)
 			p.fromManbaManbaHTTPRoute(&r)
 
-			api.Proxies = append(api.Proxies, p)
+			// ini map
+			if api.Proxies == nil {
+				api.Proxies = make(map[string]Proxy)
+			}
+			if _, ok := api.Proxies[p.ClusterName]; !ok {
+				api.Proxies[p.ClusterName] = p
+			}
 		}
 	}
 	return nil
@@ -527,6 +534,7 @@ func (p *Proxy) fromManbaHTTPRule(rule *configurationv1beta1.ManbaHTTPRule) {
 	if rule.Rewrite != nil {
 		node.URLRewrite = rule.Rewrite.URI
 	}
+	node.RetryStrategy = rule.Retry
 	p.DispatchNode = node
 }
 
@@ -540,11 +548,14 @@ func (p *Proxy) fromManbaManbaHTTPRoute(route *configurationv1beta1.ManbaHTTPRou
 	}
 	node.Cache = route.Cache
 	node.AttrName = route.AttrName
-	node.Validations = route.Validations
+	for _, v := range route.Validations {
+		node.Validations = append(node.Validations, v.ToManbaValidation())
+	}
 	node.BatchIndex = route.BatchIndex
 
-	if node.URLRewrite == "" && route.Rewrite != nil {
+	if route.Rewrite != nil && route.Rewrite.URI != "" {
 		node.URLRewrite = route.Rewrite.URI
 	}
+
 	p.DispatchNode = node
 }
