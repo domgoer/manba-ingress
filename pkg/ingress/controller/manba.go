@@ -101,11 +101,14 @@ func (m *ManbaController) toStable(s *parser.ManbaState) *dump.ManbaRawState {
 		for _, a := range api.Proxies {
 			proxies = append(proxies, a)
 		}
+		sort.SliceStable(proxies, func(i, j int) bool {
+			return proxies[i].ClusterName < proxies[j].ClusterName
+		})
+
 		ms.APIs = append(ms.APIs, &dump.API{
 			API:     &a,
 			Proxies: proxies,
 		})
-
 	}
 
 	sort.SliceStable(ms.APIs, func(i, j int) bool {
