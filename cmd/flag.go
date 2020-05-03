@@ -18,7 +18,7 @@ import (
 
 type Config struct {
 	// Admission controller server properties
-	AdmissionWebhookListen   string
+	AdmissionWebhookListen  string
 	AdmissionWebhookCertDir string
 
 	// Manba connection details

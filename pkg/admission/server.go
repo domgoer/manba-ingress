@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -94,5 +95,11 @@ func parseListen(listen string) (host string, port int, err error) {
 		err = fmt.Errorf("listen address must conform to <ip:port>")
 		return
 	}
-	return strs[0], strs[1], nil
+	portStr := strs[1]
+	port, atoiErr := strconv.Atoi(portStr)
+	if atoiErr != nil {
+		err = atoiErr
+		return
+	}
+	return strs[0], port, nil
 }

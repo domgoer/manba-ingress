@@ -2,13 +2,12 @@ package main
 
 import (
 	"fmt"
+	"github.com/domgoer/manba-ingress/pkg/admission"
 	"math/rand"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
-
-	"github.com/domgoer/manba-ingress/pkg/admission"
 
 	"github.com/domgoer/manba-ingress/pkg/utils"
 	"github.com/eapache/channels"
@@ -119,17 +118,20 @@ func main() {
 		glog.Fatalf("create manba controller failed, err: %v", err)
 	}
 
-	admissionServer, err := admission.New(restCfg, cfg.AdmissionWebhookListen, cfg.AdmissionWebhookCertDir, admission.NewValidator(cache2.ManbaFactory))
-	if err != nil {
-		glog.Fatalf("create admission server failed, err: %v", err)
-	}
-
-	go func() {
-		err := admissionServer.Start(stopCh)
+	// if admissionWebhookListen is "off", wont start admissionServer
+	if cfg.AdmissionWebhookListen != "off" {
+		admissionServer, err := admission.New(restCfg, cfg.AdmissionWebhookListen, cfg.AdmissionWebhookCertDir, admission.NewValidator(cache2.ManbaFactory))
 		if err != nil {
-			glog.Fatalf("start admission server failed, err: %v", err)
+			glog.Fatalf("create admission server failed, err: %v", err)
 		}
-	}()
+
+		go func() {
+			err := admissionServer.Start(stopCh)
+			if err != nil {
+				glog.Fatalf("start admission server failed, err: %v", err)
+			}
+		}()
+	}
 
 	go handleSigterm(manbaController, stopCh, func(code int) {
 		os.Exit(code)
