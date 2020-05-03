@@ -19,8 +19,7 @@ import (
 type Config struct {
 	// Admission controller server properties
 	AdmissionWebhookListen   string
-	AdmissionWebhookCertPath string
-	AdmissionWebhookKeyPath  string
+	AdmissionWebhookCertDir string
 
 	// Manba connection details
 	ManbaAPIServer        string
@@ -53,12 +52,9 @@ func flagSet() *pflag.FlagSet {
 	flags.String("admission-webhook-listen", "off",
 		`The address to start admission controller on (ip:port).
 Setting it to 'off' disables the admission controller.`)
-	flags.String("admission-webhook-cert-file", "/admission-webhook/tls.crt",
-		`Path to the PEM-encoded certificate file for
+	flags.String("admission-webhook-cert-dir", "/admission-webhook",
+		`Path to the PEM-encoded certificate dir for
 TLS handshake`)
-	flags.String("admission-webhook-key-file", "/admission-webhook/tls.key",
-		`Path to the PEM-encoded private key file for
-    TLS handshake`)
 
 	flags.StringP("manba-api-server-addr", "s", "", "The address of the Manba API Server to connect to in the format of protocol://address:port, e.g. grpc://localhost:9092")
 	flags.Duration("manba-api-server-timeout", time.Second*10, "The timeout of connection to Manba API Server")
@@ -125,10 +121,8 @@ func parseFlags() (cfg Config, err error) {
 
 	// Admission controller server properties
 	cfg.AdmissionWebhookListen = viper.GetString("admission-webhook-listen")
-	cfg.AdmissionWebhookCertPath =
-		viper.GetString("admission-webhook-cert-file")
-	cfg.AdmissionWebhookKeyPath =
-		viper.GetString("admission-webhook-key-file")
+	cfg.AdmissionWebhookCertDir =
+		viper.GetString("admission-webhook-cert-dir")
 
 		// manba detail
 	cfg.ManbaAPIServer = viper.GetString("manba-api-server-addr")

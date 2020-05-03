@@ -8,6 +8,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/domgoer/manba-ingress/pkg/admission"
+
 	"github.com/domgoer/manba-ingress/pkg/utils"
 	"github.com/eapache/channels"
 
@@ -116,6 +118,18 @@ func main() {
 	if err != nil {
 		glog.Fatalf("create manba controller failed, err: %v", err)
 	}
+
+	admissionServer, err := admission.New(restCfg, cfg.AdmissionWebhookListen, cfg.AdmissionWebhookCertDir, admission.NewValidator(cache2.ManbaFactory))
+	if err != nil {
+		glog.Fatalf("create admission server failed, err: %v", err)
+	}
+
+	go func() {
+		err := admissionServer.Start(stopCh)
+		if err != nil {
+			glog.Fatalf("start admission server failed, err: %v", err)
+		}
+	}()
 
 	go handleSigterm(manbaController, stopCh, func(code int) {
 		os.Exit(code)

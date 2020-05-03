@@ -45,6 +45,7 @@ spec:
                                 properties:
                                   pattern:
                                     type: string
+                                    pattern: ^/.*$
                               method: &method
                                 type: string
                                 enum:
@@ -57,6 +58,7 @@ spec:
                     properties:
                       uri:
                         type: string
+                        pattern: ^/.*$
                   ipAccessControl: &ipAccessControl
                     type: object
                     properties:
