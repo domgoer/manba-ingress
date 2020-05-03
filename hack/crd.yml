@@ -152,7 +152,7 @@ spec:
                     items:
                       type: object
                       properties:
-                        cluster:
+                        cluster: &cluster
                           type: object
                           properties:
                             name:
@@ -165,11 +165,26 @@ spec:
                         attrName:
                           type: string
                         validations:
-                          type: array
-                          items:
-                            type: object
-                            properties:
-                              parameter:
+                          type: object
+                          properties:
+                            cookie:
+                              type: object
+                            query:
+                              type: object
+                            jsonBody:
+                              type: object
+                            header:
+                              type: object
+                            pathValue:
+                              type: object
+                            formData:
+                              type: object
+                        cache:
+                          type: object
+                          properties:
+                            keys:
+                              type: array
+                              items:
                                 type: object
                                 properties: &parameter
                                   name:
@@ -196,17 +211,9 @@ spec:
                                           - regexp
                                         expression:
                                           type: string
-                        cache:
-                          type: object
-                          properties:
-                            keys:
-                              type: array
-                              items:
-                                type: object
-                                properties: *parameter
                             deadline:
                               type: number
-                            conditions:
+                            conditions: &conditions
                               type: array
                               items:
                                 type: object
@@ -233,6 +240,18 @@ spec:
                           type: number
                         readTimeout:
                           type: number
+                  mirror: &routing
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        cluster: *cluster
+                        conditions: *conditions
+                        rate:
+                          type: number
+                          minimum: 0
+                          maximum: 100
+                  split: *routing
 
 ---
 

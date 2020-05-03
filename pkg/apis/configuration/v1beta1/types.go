@@ -1,6 +1,8 @@
 package v1beta1
 
 import (
+	"sort"
+
 	"github.com/fagongzi/gateway/pkg/pb/metapb"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -50,6 +52,8 @@ type ManbaHTTPRule struct {
 	AuthFilter      *string                 `json:"authFilter,omitempty"`
 	TrafficPolicy   *TrafficPolicy          `json:"trafficPolicy,omitempty"`
 	Route           []ManbaHTTPRoute        `json:"route,omitempty"`
+	Mirror          []ManbaHTTPRouting      `json:"mirror,omitempty"`
+	Split           []ManbaHTTPRouting      `json:"split,omitempty"`
 }
 
 type ManbaHTTPMatch struct {
@@ -78,16 +82,22 @@ func (m *ManbaHTTPURIRewrite) GetURI() string {
 	return m.URI
 }
 
+type ManbaHTTPRouting struct {
+	Cluster    ManbaHTTPRouteCluster `json:"cluster,omitempty"`
+	Rate       *int32                `json:"rate,omitempty"`
+	Conditions []metapb.Condition    `json:"conditions,omitempty"`
+}
+
 type ManbaHTTPRoute struct {
-	Cluster      ManbaHTTPRouteCluster       `json:"cluster,omitempty"`
-	Rewrite      *ManbaHTTPURIRewrite        `json:"rewrite,omitempty"`
-	AttrName     string                      `json:"attrName,omitempty"`
-	Validations  []*ManbaHTTPRouteValidation `json:"validations,omitempty"`
-	Cache        *metapb.Cache               `json:"cache,omitempty"`
-	BatchIndex   int32                       `json:"batchIndex,omitempty"`
-	DefaultValue *metapb.HTTPResult          `json:"default_value,omitempty"`
-	WriteTimeout int64                       `json:"writeTimeout,omitempty"`
-	ReadTimeout  int64                       `json:"readTimeout,omitempty"`
+	Cluster      ManbaHTTPRouteCluster `json:"cluster,omitempty"`
+	Rewrite      *ManbaHTTPURIRewrite  `json:"rewrite,omitempty"`
+	AttrName     string                `json:"attrName,omitempty"`
+	Match        *ManbaHTTPRouteMatch  `json:"match,omitempty"`
+	Cache        *metapb.Cache         `json:"cache,omitempty"`
+	BatchIndex   int32                 `json:"batchIndex,omitempty"`
+	DefaultValue *metapb.HTTPResult    `json:"default_value,omitempty"`
+	WriteTimeout int64                 `json:"writeTimeout,omitempty"`
+	ReadTimeout  int64                 `json:"readTimeout,omitempty"`
 }
 
 type ManbaHTTPRouteCluster struct {
@@ -96,46 +106,53 @@ type ManbaHTTPRouteCluster struct {
 	Port   intstr.IntOrString `json:"port,omitempty"`
 }
 
-type ManbaHTTPRouteValidation struct {
-	Parameter ManbaHTTPRouteValidationParameter `json:"parameter"`
-	Required  bool                              `json:"required"`
-	Rules     []ManbaHTTPRouteValidationRule    `json:"rules"`
+type ManbaHTTPRouteMatch struct {
+	Cookie    map[string]string `json:"cookie"`
+	Query     map[string]string `json:"query"`
+	JSONBody  map[string]string `json:"jsonBody"`
+	Header    map[string]string `json:"header"`
+	PathValue map[string]string `json:"pathValue"`
+	FormData  map[string]string `json:"formData"`
 }
 
-func (v *ManbaHTTPRouteValidation) ToManbaValidation() *metapb.Validation {
-	val := new(metapb.Validation)
-	val.Parameter = *v.Parameter.ToManbaParameter()
-	val.Required = v.Required
-	for _, r := range v.Rules {
-		val.Rules = append(val.Rules, *r.ToManbaValidationRule())
+func (v *ManbaHTTPRouteMatch) ToManbaValidations() []*metapb.Validation {
+	if v == nil {
+		return nil
 	}
-	return val
-}
+	var res []*metapb.Validation
 
-type ManbaHTTPRouteValidationParameter struct {
-	Name   string `json:"name"`
-	Source string `json:"source"`
-	Index  int32  `json:"index"`
-}
+	parse := func(source metapb.Source, data map[string]string) []*metapb.Validation {
+		var res []*metapb.Validation
+		for k, v := range data {
+			res = append(res, &metapb.Validation{
+				Parameter: metapb.Parameter{
+					Name:   k,
+					Source: source,
+				},
+				Required: true,
+				Rules: []metapb.ValidationRule{{
+					RuleType:   metapb.RuleRegexp,
+					Expression: v,
+				}},
+			})
+		}
+		return res
+	}
 
-func (p *ManbaHTTPRouteValidationParameter) ToManbaParameter() *metapb.Parameter {
-	par := new(metapb.Parameter)
-	par.Index = p.Index
-	par.Name = p.Name
-	par.Source = metapb.Source(metapb.Source_value[p.Source])
-	return par
-}
+	res = append(res, parse(metapb.Cookie, v.Cookie)...)
+	res = append(res, parse(metapb.FormData, v.FormData)...)
+	res = append(res, parse(metapb.Header, v.Header)...)
+	res = append(res, parse(metapb.JSONBody, v.JSONBody)...)
+	res = append(res, parse(metapb.QueryString, v.Query)...)
+	res = append(res, parse(metapb.PathValue, v.PathValue)...)
 
-type ManbaHTTPRouteValidationRule struct {
-	RuleType   string `json:"ruleType"`
-	Expression string `json:"expression"`
-}
+	sort.Slice(res, func(i, j int) bool {
+		param1 := res[i].Parameter
+		param2 := res[j].Parameter
+		return param1.Source <= param2.Source && param1.Name < param2.Name
+	})
 
-func (r *ManbaHTTPRouteValidationRule) ToManbaValidationRule() *metapb.ValidationRule {
-	val := new(metapb.ValidationRule)
-	val.Expression = r.Expression
-	val.RuleType = metapb.RuleType(metapb.RuleType_value[r.RuleType])
-	return val
+	return res
 }
 
 // +genclient

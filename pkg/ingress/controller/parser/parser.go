@@ -67,6 +67,7 @@ type API struct {
 	// Proxies key: clusterName, value: Proxy
 	Proxies  map[string]Proxy
 	HTTPRule configurationv1beta1.ManbaHTTPRule
+	Routings []Routing
 }
 
 // Plugin implements manba Plugin
@@ -140,6 +141,12 @@ func (p *Parser) Build() (*ManbaState, error) {
 			if check(api.Name) {
 				state.APIs = append(state.APIs, *api)
 			}
+
+			for _, routing := range api.Routings {
+				if check(routing.Name) {
+					state.Routings = append(state.Routings, routing)
+				}
+			}
 		}
 		service.Cluster.Servers = service.Servers
 		if check(service.Cluster.Name) {
@@ -153,8 +160,6 @@ func (p *Parser) Build() (*ManbaState, error) {
 				}
 			}
 		}
-
-		// TODO: add routing
 	}
 
 	return &state, nil
@@ -216,9 +221,9 @@ func (p *Parser) parseIngressRules(
 
 			}
 
-			for _, backend := range rule.Route {
+			for _, route := range rule.Route {
 
-				cls := backend.Cluster
+				cls := route.Cluster
 
 				serviceName := fmt.Sprintf("%s.%s.%s.%s.svc", ingress.Namespace, cls.Name, cls.Subset, cls.Port.String())
 
@@ -304,7 +309,7 @@ func (p *Parser) fillOverride(service *Service) error {
 			}
 
 			p.fromManbaHTTPRule(&rule)
-			p.fromManbaManbaHTTPRoute(&r)
+			p.fromManbaHTTPRoute(&r)
 
 			// ini map
 			if api.Proxies == nil {
@@ -313,6 +318,37 @@ func (p *Parser) fillOverride(service *Service) error {
 			if _, ok := api.Proxies[p.ClusterName]; !ok {
 				api.Proxies[p.ClusterName] = p
 			}
+		}
+
+		parseRouting := func(m configurationv1beta1.ManbaHTTPRouting, override func(Routing) Routing) Routing {
+			var rate int32 = 100
+			if m.Rate != nil {
+				rate = *m.Rate
+			}
+			return override(Routing{
+				APIName:     api.Name,
+				ClusterName: fmt.Sprintf("%s.%s.%s.%s.svc", api.Namespace, m.Cluster.Name, m.Cluster.Subset, m.Cluster.Port.String()),
+				Routing: metapb.Routing{
+					TrafficRate: rate,
+					Status:      metapb.Up,
+					Conditions:  m.Conditions,
+				},
+			})
+		}
+
+		for i, mirror := range api.HTTPRule.Mirror {
+			api.Routings = append(api.Routings, parseRouting(mirror, func(r Routing) Routing {
+				r.Name = fmt.Sprintf("%s.mirror.%d", api.Name, i)
+				r.Strategy = metapb.Copy
+				return r
+			}))
+		}
+		for i, split := range api.HTTPRule.Split {
+			api.Routings = append(api.Routings, parseRouting(split, func(r Routing) Routing {
+				r.Name = fmt.Sprintf("%s.split.%d", api.Name, i)
+				r.Strategy = metapb.Split
+				return r
+			}))
 		}
 	}
 	return nil
@@ -538,7 +574,7 @@ func (p *Proxy) fromManbaHTTPRule(rule *configurationv1beta1.ManbaHTTPRule) {
 	p.DispatchNode = node
 }
 
-func (p *Proxy) fromManbaManbaHTTPRoute(route *configurationv1beta1.ManbaHTTPRoute) {
+func (p *Proxy) fromManbaHTTPRoute(route *configurationv1beta1.ManbaHTTPRoute) {
 	node := p.DispatchNode
 	node.WriteTimeout = route.WriteTimeout
 	node.ReadTimeout = route.ReadTimeout
@@ -548,9 +584,7 @@ func (p *Proxy) fromManbaManbaHTTPRoute(route *configurationv1beta1.ManbaHTTPRou
 	}
 	node.Cache = route.Cache
 	node.AttrName = route.AttrName
-	for _, v := range route.Validations {
-		node.Validations = append(node.Validations, v.ToManbaValidation())
-	}
+	node.Validations = route.Match.ToManbaValidations()
 	node.BatchIndex = route.BatchIndex
 
 	if route.Rewrite != nil && route.Rewrite.URI != "" {

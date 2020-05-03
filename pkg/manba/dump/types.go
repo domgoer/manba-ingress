@@ -33,6 +33,8 @@ type Cluster struct {
 
 // Routing ...
 type Routing struct {
+	APIName     string
+	ClusterName string
 	*metapb.Routing
 }
 

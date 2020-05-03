@@ -129,7 +129,9 @@ func (m *ManbaController) toStable(s *parser.ManbaState) *dump.ManbaRawState {
 	for _, routing := range s.Routings {
 		r := routing.Routing
 		ms.Routings = append(ms.Routings, &dump.Routing{
-			Routing: &r,
+			APIName:     routing.APIName,
+			ClusterName: routing.ClusterName,
+			Routing:     &r,
 		})
 	}
 	sort.SliceStable(ms.Routings, func(i, j int) bool {
@@ -168,6 +170,7 @@ func (m *ManbaController) toStable(s *parser.ManbaState) *dump.ManbaRawState {
 func (m *ManbaController) setTargetsIDs(target *dump.ManbaRawState, current *state.ManbaState) error {
 	serverAddrIDsMap := make(map[string]uint64, len(target.Servers))
 	clusterNameIDsMap := make(map[string]uint64, len(target.Clusters))
+	apiNameIDsMap := make(map[string]uint64, len(target.APIs))
 
 	for _, server := range target.Servers {
 		if server.GetID() == 0 {
@@ -237,6 +240,8 @@ func (m *ManbaController) setTargetsIDs(target *dump.ManbaRawState, current *sta
 		}
 
 		api.Nodes = nodes
+
+		apiNameIDsMap[api.Name] = api.ID
 	}
 
 	for _, routing := range target.Routings {
@@ -249,6 +254,17 @@ func (m *ManbaController) setTargetsIDs(target *dump.ManbaRawState, current *sta
 			} else {
 				routing.ID = r.GetID()
 			}
+		}
+
+		if cid, ok := clusterNameIDsMap[routing.ClusterName]; !ok {
+			glog.Warningf("not found cluster name <%s>", routing.ClusterName)
+		} else {
+			routing.ClusterID = cid
+		}
+		if aid, ok := apiNameIDsMap[routing.APIName]; !ok {
+			glog.Warningf("not found api name <%s>", routing.APIName)
+		} else {
+			routing.API = aid
 		}
 	}
 
