@@ -15,8 +15,6 @@ require (
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/hashicorp/go-memdb v1.1.0
 	github.com/hbagdi/deck v1.0.2
-	github.com/hbagdi/go-kong v0.11.0
-	github.com/kong/kubernetes-ingress-controller v0.0.5 // indirect
 	github.com/labstack/echo v3.3.10+incompatible // indirect
 	github.com/labstack/gommon v0.3.0 // indirect
 	github.com/pkg/errors v0.9.1

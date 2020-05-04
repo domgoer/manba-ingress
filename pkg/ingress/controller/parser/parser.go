@@ -83,7 +83,7 @@ type Proxy struct {
 }
 
 // Parser parses Kubernetes CRDs and Ingress rules and generates a
-// Kong configuration.
+// Manba configuration.
 type Parser struct {
 	store store.Store
 }

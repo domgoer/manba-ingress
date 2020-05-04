@@ -226,7 +226,6 @@ github.com/hashicorp/hcl v1.0.0 h1:0Anlzjpi4vEasTeNFn2mLJgTSwt0+6sfsiTG8qcWGx4=
 github.com/hashicorp/hcl v1.0.0/go.mod h1:E5yfLk+7swimpb2L/Alb/PJmXilQ/rhwaUYs4T20WEQ=
 github.com/hbagdi/deck v1.0.2 h1:mWtVE+NEWG9s41MU8NUx40lfm6jqGljXgqSVq0YzzMk=
 github.com/hbagdi/deck v1.0.2/go.mod h1:dLJ444pa4NbClp/dfoxzMJ2BZ8G3mZxpa+RZh1tXOyw=
-github.com/hbagdi/go-kong v0.11.0 h1:yWhxXQ4Zsglx4vy1I+2NbXkabq3m23e/XXgwZ2CNjAM=
 github.com/hbagdi/go-kong v0.11.0/go.mod h1:qEtSDLbiWs8n2NzpRsNE46Z8LsWpGj2ELrMmIESYIyc=
 github.com/hpcloud/tail v1.0.0 h1:nfCOvKYfkgYP8hkirhJocXT2+zOD8yUNjXaWfTlyFKI=
 github.com/hpcloud/tail v1.0.0/go.mod h1:ab1qPbhIpdTxEkNHXyeSf5vhxWSCs/tWer42PpOxQnU=
@@ -251,8 +250,6 @@ github.com/k0kubun/colorstring v0.0.0-20150214042306-9440f1994b88/go.mod h1:3w7q
 github.com/kisielk/errcheck v1.1.0/go.mod h1:EZBBE59ingxPouuu3KfxchcWSUPOHkagtvWXihfKN4Q=
 github.com/kisielk/errcheck v1.2.0/go.mod h1:/BMXB+zMLi60iA8Vv6Ksmxu/1UDYcXs4uQLJ+jE2L00=
 github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
-github.com/kong/kubernetes-ingress-controller v0.0.5 h1:LXZZVGecez/prN70ER9smX1BS1ep73EK4X6R0Mx0QF8=
-github.com/kong/kubernetes-ingress-controller v0.0.5/go.mod h1:VC2WEi9enGT4jKJ5H07f21+ivqABhEEcB3WpPT+S1MY=
 github.com/konsorten/go-windows-terminal-sequences v1.0.1 h1:mweAR1A6xJ3oS2pRaGiHgQ4OO8tzTaLawm8vnODuwDk=
 github.com/konsorten/go-windows-terminal-sequences v1.0.1/go.mod h1:T0+1ngSBFLxvqU3pZ+m/2kptfBszLMUkC4ZK/EgS/cQ=
 github.com/kr/logfmt v0.0.0-20140226030751-b84e30acd515/go.mod h1:+0opPa2QZZtGFBFZlji/RkVcI2GknAs/DXo4wKdlNEc=

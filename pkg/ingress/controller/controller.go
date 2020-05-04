@@ -6,6 +6,8 @@ import (
 	"sync"
 	"time"
 
+	"k8s.io/client-go/tools/leaderelection"
+
 	"github.com/domgoer/manba-ingress/pkg/ingress/controller/parser"
 	"github.com/domgoer/manba-ingress/pkg/ingress/k8s"
 	"github.com/domgoer/manba-ingress/pkg/ingress/status"
@@ -94,6 +96,10 @@ func NewManbaController(cfg Config, updateCh *channels.RingChannel, store store.
 		ResourceName:      resourceName,
 		ResourceNamespace: pod.Namespace,
 		ElectionID:        cfg.ElectionID,
+		Callbacks: leaderelection.LeaderCallbacks{
+			OnStartedLeading: func(i context.Context) {},
+			OnStoppedLeading: func() {},
+		},
 	}
 
 	if cfg.UpdateStatus {
@@ -153,7 +159,7 @@ func (m *ManbaController) syncManbaIngress(interface{}) error {
 
 	err = m.OnUpdate(state)
 	if err != nil {
-		glog.Errorf("unexpected failure updating Manba configuration: \n%v", err)
+		glog.Errorf("unexpected failure updating Manba configuration: %v", err)
 		return err
 	}
 

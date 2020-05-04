@@ -72,6 +72,9 @@ func Solve(doneCh chan struct{}, syncer *diff.Syncer,
 	for _, e := range errs {
 		list = append(list, e.Error())
 	}
+	if len(list) == 0 {
+		return stats, nil
+	}
 	return stats, errors.New(strings.Join(list, "\n"))
 
 }

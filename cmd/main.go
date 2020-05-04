@@ -1,9 +1,13 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/domgoer/manba-ingress/pkg/admission"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"math/rand"
+	"net/http"
+	"net/http/pprof"
 	"os"
 	"os/signal"
 	"syscall"
@@ -137,6 +141,10 @@ func main() {
 		os.Exit(code)
 	})
 
+
+	mux := http.NewServeMux()
+	go registerHandlers(cfg.EnableProfiling, 10254,  mux)
+
 	manbaController.Start()
 }
 
@@ -240,4 +248,50 @@ func handleSigterm(manbaC *controller.ManbaController, stopCh chan struct{},
 
 	glog.Infof("Exiting with %v", exitCode)
 	exit(exitCode)
+}
+
+
+func registerHandlers(enableProfiling bool, port int, mux *http.ServeMux) {
+
+	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	mux.Handle("/metrics", promhttp.Handler())
+
+	mux.HandleFunc("/build", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		b, _ := json.Marshal(version())
+		w.Write(b)
+	})
+
+	mux.HandleFunc("/stop", func(w http.ResponseWriter, r *http.Request) {
+		err := syscall.Kill(syscall.Getpid(), syscall.SIGTERM)
+		if err != nil {
+			glog.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	if enableProfiling {
+		mux.HandleFunc("/debug/pprof/", pprof.Index)
+		mux.HandleFunc("/debug/pprof/heap", pprof.Index)
+		mux.HandleFunc("/debug/pprof/mutex", pprof.Index)
+		mux.HandleFunc("/debug/pprof/goroutine", pprof.Index)
+		mux.HandleFunc("/debug/pprof/threadcreate", pprof.Index)
+		mux.HandleFunc("/debug/pprof/block", pprof.Index)
+		mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+		mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
+		mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+		mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
+	}
+
+	server := &http.Server{
+		Addr:              fmt.Sprintf(":%v", port),
+		Handler:           mux,
+		ReadTimeout:       10 * time.Second,
+		ReadHeaderTimeout: 10 * time.Second,
+		WriteTimeout:      300 * time.Second,
+		IdleTimeout:       120 * time.Second,
+	}
+	glog.Fatal(server.ListenAndServe())
 }

@@ -19,7 +19,7 @@ const (
 	configurationAnnotationKey = "configuration.manba.io"
 
 	// DefaultIngressClass defines the default class used
-	// by Kong's ingress controller.
+	// by Manba's ingress controller.
 	DefaultIngressClass = "manba"
 )
 

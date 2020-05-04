@@ -1,0 +1,102 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: manba-serviceaccount
+  namespace: manba
+
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRole
+metadata:
+  name: manba-ingress-clusterrole
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - endpoints
+      - nodes
+      - pods
+      - secrets
+    verbs:
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - nodes
+    verbs:
+      - get
+  - apiGroups:
+      - ""
+    resources:
+      - services
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - "networking.k8s.io"
+      - "extensions"
+    resources:
+      - ingresses
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+      - patch
+  - apiGroups:
+      - "networking.k8s.io"
+      - "extensions"
+    resources:
+      - ingresses/status
+    verbs:
+      - update
+  - apiGroups:
+      - "configuration.manba.io"
+    resources:
+      - manbaingresses
+      - manbaclusters
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    resourceNames:
+      # Defaults to "<election-id>-<ingress-class>"
+      # Here: "<ingress-controller-leader>-<manba>"
+      # This has to be adapted if you change either parameter
+      # when launching the manba-ingress-controller.
+      - "ingress-controller-leader-manba"
+    verbs:
+      - get
+      - update
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    verbs:
+      - create
+
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: manba-ingress-clusterrole-nisa-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: manba-ingress-clusterrole
+subjects:
+  - kind: ServiceAccount
+    name: manba-serviceaccount
+    namespace: manba

@@ -44,6 +44,7 @@ type Config struct {
 	PublishService       string
 	PublishStatusAddress string
 	UpdateStatus         bool
+	EnableProfiling      bool
 }
 
 func flagSet() *pflag.FlagSet {
@@ -59,7 +60,7 @@ TLS handshake`)
 	flags.StringP("manba-api-server-addr", "s", "", "The address of the Manba API Server to connect to in the format of protocol://address:port, e.g. grpc://localhost:9092")
 	flags.Duration("manba-api-server-timeout", time.Second*10, "The timeout of connection to Manba API Server")
 	flags.String("manba-workspace", "",
-		"Workspace in Kong Enterprise to be configured")
+		"Workspace in Manba Enterprise to be configured")
 	flags.Int("manba-concurrency", 10, "Max number of concurrent requests sent to Manba's Admin API")
 
 	// Resource filtering
@@ -87,6 +88,7 @@ ingress using this address.`)
 	flags.Bool("update-status", true, `Indicates if the ingress controller
 should update the Ingress status IP/hostname.`)
 
+	flags.Bool("profiling", true, `Enable profiling via web interface host:port/debug/pprof/`)
 	// k8s connection details
 	flags.String("apiserver-host", "",
 		`The address of the Kubernetes Apiserver to connect to in the format of 
@@ -148,5 +150,6 @@ func parseFlags() (cfg Config, err error) {
 	cfg.PublishStatusAddress = viper.GetString("publish-status-address")
 	cfg.UpdateStatus = viper.GetBool("update-status")
 
+	cfg.EnableProfiling = viper.GetBool("profiling")
 	return
 }

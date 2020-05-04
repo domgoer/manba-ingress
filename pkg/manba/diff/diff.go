@@ -16,8 +16,8 @@ var (
 
 // TODO get rid of the syncer struct and simply have a func for it
 
-// Syncer takes in a current and target state of Kong,
-// diffs them, generating a Graph to get Kong from current
+// Syncer takes in a current and target state of Manba,
+// diffs them, generating a Graph to get Manba from current
 // to target state.
 type Syncer struct {
 	currentState *state.ManbaState
