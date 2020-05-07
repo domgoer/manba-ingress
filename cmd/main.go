@@ -141,9 +141,8 @@ func main() {
 		os.Exit(code)
 	})
 
-
 	mux := http.NewServeMux()
-	go registerHandlers(cfg.EnableProfiling, 10254,  mux)
+	go registerHandlers(cfg.EnableProfiling, 10254, mux)
 
 	manbaController.Start()
 }
@@ -249,7 +248,6 @@ func handleSigterm(manbaC *controller.ManbaController, stopCh chan struct{},
 	glog.Infof("Exiting with %v", exitCode)
 	exit(exitCode)
 }
-
 
 func registerHandlers(enableProfiling bool, port int, mux *http.ServeMux) {
 

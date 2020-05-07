@@ -16,7 +16,7 @@ spec:
   subsets:
   - name: v1
     labels:
-      version: v1
+      app: api-server
     trafficPolicy:
       loadBalancer: IPHash
       maxQPS: 500
@@ -28,7 +28,7 @@ spec:
         succeedRateToOpen: 50
   - name: v2
     labels:
-      version: v2
+      app: api-proxy
 
 ---
 
@@ -38,16 +38,20 @@ metadata:
   name: my-api
   namespace: default
 spec:
-  hosts:
-  - blog.domgoer.io
-  - domgoer.github.io
   http:
   - match:
-    - uri:
-        pattern: /
-      method: GET
+    - host: blog.domgoer.io
+      rules:
+      - uri:
+          pattern: /
+          method: GET
+    - host: github.domgoer.io
+      rules:
+        - uri:
+            pattern: /blog
+            method: POST
     rewrite:
-      uri: /a
+      uri: /domgoer/blog
     accessControl:
       blacklist:
       - 1.1.1.1
@@ -62,12 +66,18 @@ spec:
     route:
     - cluster:
         name: my-cluster
-        port: 8000
+        port: 9093
         subset: v1
     - cluster:
         name: my-cluster
-        port: 8000
+        port: 9092
         subset: v2
+    split:
+    - cluster:
+        name: my-cluster
+        subset: v1
+        port: 9093
+      rate: 30
     renderTemplate:
       objects:  
       - name: test

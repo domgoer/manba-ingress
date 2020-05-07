@@ -18,6 +18,7 @@ require (
 	github.com/labstack/echo v3.3.10+incompatible // indirect
 	github.com/labstack/gommon v0.3.0 // indirect
 	github.com/pkg/errors v0.9.1
+	github.com/prometheus/client_golang v1.0.0
 	github.com/prometheus/tsdb v0.7.1
 	github.com/sony/sonyflake v1.0.0
 	github.com/spf13/pflag v1.0.5

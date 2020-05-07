@@ -182,7 +182,6 @@ func (p *Parser) parseIngressRules(
 		var apis []*API
 
 		for j, rule := range ingressSpec.HTTP {
-
 			base := API{
 				API:       metapb.API{},
 				Namespace: ingress.Namespace,
