@@ -1,22 +1,11 @@
 package annotations
 
 import (
-	"encoding/json"
-	"strconv"
-
-	"github.com/fagongzi/gateway/pkg/pb/metapb"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
 	ingressClassKey = "kubernetes.io/ingress.class"
-
-	loadBalanceAnnotationKey = "configuration.manba.io/loadBalancer"
-	maxQPSAnnotationKey      = "configuration.manba.io/maxQPS"
-
-	circuitBreakerAnnotationKey = "configuration.manba.io/circuitBreaker"
-
-	configurationAnnotationKey = "configuration.manba.io"
 
 	// DefaultIngressClass defines the default class used
 	// by Manba's ingress controller.
@@ -25,6 +14,7 @@ const (
 
 // IngressClassValidatorFunc returns a function which can validate if an Object
 // belongs to an the ingressClass or not.
+// Deprecated: This method was designed for compatibility with k8s ingress, and now all crds are used
 func IngressClassValidatorFunc(
 	ingressClass string) func(obj metav1.Object) bool {
 
@@ -57,36 +47,4 @@ func validIngress(ingressAnnotationValue, ingressClass string) bool {
 		return true
 	}
 	return ingressAnnotationValue == ingressClass
-}
-
-// ExtractLoadBalancer extracts the lb supplied in the annotation
-func ExtractLoadBalancer(anns map[string]string) metapb.LoadBalance {
-	return metapb.LoadBalance(metapb.LoadBalance_value[anns[loadBalanceAnnotationKey]])
-}
-
-// ExtractMaxQPS extracts the max qps of server
-func ExtractMaxQPS(anns map[string]string) int64 {
-	i, _ := strconv.Atoi(anns[maxQPSAnnotationKey])
-	return int64(i)
-}
-
-// ExtractCircuitBreaker extracts the circuitBreaker of server
-func ExtractCircuitBreaker(anns map[string]string) *metapb.CircuitBreaker {
-	data := anns[circuitBreakerAnnotationKey]
-	if data == "" {
-		return nil
-	}
-
-	res := new(metapb.CircuitBreaker)
-	err := json.Unmarshal([]byte(data), res)
-	if err != nil {
-		return nil
-	}
-	return res
-}
-
-// ExtractConfigurationName extracts the name of the ManbaIngress object that holds
-// information about the configuration to use in APIs, Routings and Services
-func ExtractConfigurationName(anns map[string]string) string {
-	return anns[configurationAnnotationKey]
 }

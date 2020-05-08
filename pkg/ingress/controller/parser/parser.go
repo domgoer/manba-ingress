@@ -9,14 +9,12 @@ import (
 
 	configurationv1beta1 "github.com/domgoer/manba-ingress/pkg/apis/configuration/v1beta1"
 
-	"github.com/domgoer/manba-ingress/pkg/ingress/annotations"
 	"github.com/domgoer/manba-ingress/pkg/ingress/store"
 	"github.com/domgoer/manba-ingress/pkg/utils"
 	"github.com/fagongzi/gateway/pkg/pb/metapb"
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
@@ -500,34 +498,6 @@ func getEndpoints(
 
 	glog.V(3).Infof("endpoints found: %v", upsServers)
 	return upsServers
-}
-
-func (p *Parser) getManbaIngressForService(service corev1.Service) (*configurationv1beta1.ManbaIngress, error) {
-	configName := annotations.ExtractConfigurationName(service.GetAnnotations())
-	if configName == "" {
-		return nil, nil
-	}
-	return p.store.GetManbaIngress(service.Namespace, configName)
-}
-
-func overrideCluster(cluster *Cluster, annos map[string]string) {
-	if cluster == nil {
-		return
-	}
-
-	cluster.LoadBalance = annotations.ExtractLoadBalancer(annos)
-}
-
-func (p *Parser) getManbaIngressFromIngress(ingress *networkingv1beta1.Ingress) (*configurationv1beta1.ManbaIngress, error) {
-	configName := annotations.ExtractConfigurationName(ingress.GetAnnotations())
-	if configName != "" {
-		mi, err := p.store.GetManbaIngress(ingress.Namespace, configName)
-		if err == nil {
-			return mi, nil
-		}
-	}
-
-	return p.store.GetManbaIngress(ingress.Namespace, ingress.Name)
 }
 
 func (p *Parser) getClusterSubset(list []configurationv1beta1.ManbaClusterSubSet, subset string) (res configurationv1beta1.ManbaClusterSubSet, err error) {

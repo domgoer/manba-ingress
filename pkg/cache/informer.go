@@ -15,50 +15,43 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
-var (
-	// Factory to list services and eps
-	Factory informers.SharedInformerFactory
-	// ManbaFactory to list manbaIngress and manbaCluster
-	ManbaFactory configurationinformer.SharedInformerFactory
-)
-
 // CreateInformers creates ingress, ep, svc, manbaIngress and pods' informers
-func CreateInformers(k8sCli kubernetes.Interface, cfg *rest.Config, syncPeriod time.Duration, namespace, ingressClass string, updateChannel *channels.RingChannel) []cache.SharedIndexInformer {
+func CreateInformers(k8sCli kubernetes.Interface, cfg *rest.Config, syncPeriod time.Duration, namespace, ingressClass string, updateChannel *channels.RingChannel) ([]cache.SharedIndexInformer, informers.SharedInformerFactory, configurationinformer.SharedInformerFactory) {
 	reh := controller.ResourceEventHandler{
 		UpdateCh:           updateChannel,
 		IsValidIngresClass: annotations.IngressClassValidatorFunc(ingressClass),
 	}
 
-	Factory = informers.NewSharedInformerFactoryWithOptions(
+	factory := informers.NewSharedInformerFactoryWithOptions(
 		k8sCli,
 		syncPeriod,
 		informers.WithNamespace(namespace),
 	)
 
 	confClient, _ := configurationclientv1.NewForConfig(cfg)
-	ManbaFactory = configurationinformer.NewSharedInformerFactoryWithOptions(confClient, syncPeriod, configurationinformer.WithNamespace(namespace))
+	manbaFactory := configurationinformer.NewSharedInformerFactoryWithOptions(confClient, syncPeriod, configurationinformer.WithNamespace(namespace))
 
 	var informers []cache.SharedIndexInformer
 
 	// create endpoint informer
-	epInformer := Factory.Core().V1().Endpoints().Informer()
+	epInformer := factory.Core().V1().Endpoints().Informer()
 	epInformer.AddEventHandler(controller.EndpointsEventHandler{
 		UpdateCh: updateChannel,
 	})
 	informers = append(informers, epInformer)
 
 	// create service informer
-	svcInformer := Factory.Core().V1().Services().Informer()
+	svcInformer := factory.Core().V1().Services().Informer()
 	svcInformer.AddEventHandler(reh)
 	informers = append(informers, svcInformer)
 
-	manbaIngInformer := ManbaFactory.Configuration().V1beta1().ManbaIngresses().Informer()
+	manbaIngInformer := manbaFactory.Configuration().V1beta1().ManbaIngresses().Informer()
 	manbaIngInformer.AddEventHandler(reh)
 	informers = append(informers, manbaIngInformer)
 
-	manbaClusterInformer := ManbaFactory.Configuration().V1beta1().ManbaClusters().Informer()
+	manbaClusterInformer := manbaFactory.Configuration().V1beta1().ManbaClusters().Informer()
 	manbaClusterInformer.AddEventHandler(reh)
 	informers = append(informers, manbaClusterInformer)
 
-	return informers
+	return informers, factory, manbaFactory
 }

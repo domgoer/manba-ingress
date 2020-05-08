@@ -3,8 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/domgoer/manba-ingress/pkg/admission"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"math/rand"
 	"net/http"
 	"net/http/pprof"
@@ -12,6 +10,9 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/domgoer/manba-ingress/pkg/admission"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/domgoer/manba-ingress/pkg/utils"
 	"github.com/eapache/channels"
@@ -105,7 +106,7 @@ func main() {
 	updateChannel := channels.NewRingChannel(1024)
 
 	var synced []cache.InformerSynced
-	informers := cache2.CreateInformers(kubeClient, restCfg, cfg.SyncPeriod, cfg.WatchNamespace, cfg.IngressClass, updateChannel)
+	informers, factory, manbaFactory := cache2.CreateInformers(kubeClient, restCfg, cfg.SyncPeriod, cfg.WatchNamespace, cfg.IngressClass, updateChannel)
 
 	stopCh := make(chan struct{})
 	for _, informer := range informers {
@@ -116,7 +117,7 @@ func main() {
 		runtime.HandleError(fmt.Errorf("Timed out waiting for caches to sync"))
 	}
 
-	s := store.New(kubeClient, cache2.Factory, cache2.ManbaFactory, annotations.IngressClassValidatorFuncFromObjectMeta(controllerConfig.IngressClass))
+	s := store.New(kubeClient, factory, manbaFactory, annotations.IngressClassValidatorFuncFromObjectMeta(controllerConfig.IngressClass))
 	manbaController, err := controller.NewManbaController(controllerConfig, updateChannel, s)
 	if err != nil {
 		glog.Fatalf("create manba controller failed, err: %v", err)
@@ -124,7 +125,7 @@ func main() {
 
 	// if admissionWebhookListen is "off", wont start admissionServer
 	if cfg.AdmissionWebhookListen != "off" {
-		admissionServer, err := admission.New(restCfg, cfg.AdmissionWebhookListen, cfg.AdmissionWebhookCertDir, admission.NewValidator(cache2.ManbaFactory))
+		admissionServer, err := admission.New(restCfg, cfg.AdmissionWebhookListen, cfg.AdmissionWebhookCertDir, admission.NewValidator(manbaFactory))
 		if err != nil {
 			glog.Fatalf("create admission server failed, err: %v", err)
 		}
