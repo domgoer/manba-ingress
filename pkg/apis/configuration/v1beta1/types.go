@@ -20,7 +20,7 @@ type ManbaIngress struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec *ManbaIngressSpec `json:"spec,omitempty"`
+	Spec ManbaIngressSpec `json:"spec,omitempty"`
 
 	// Status *ManbaIngressStatus `json:"status,omitempty"`
 	Status networkingv1beta1.IngressStatus `json:"status,omitempty"`
@@ -37,8 +37,8 @@ type ManbaIngressList struct {
 
 // ManbaIngressSpec api list
 type ManbaIngressSpec struct {
-	HTTP []ManbaHTTPRule `json:"http,omitempty"`
-	// TLS   []networkingv1beta1.IngressTLS `json:"tls,omitempty"`
+	HTTP []ManbaHTTPRule              `json:"http,omitempty"`
+	TLS  networkingv1beta1.IngressTLS `json:"tls,omitempty"`
 }
 
 // ManbaHTTPRule implements manba api

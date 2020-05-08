@@ -45,6 +45,10 @@ func CreateInformers(k8sCli kubernetes.Interface, cfg *rest.Config, syncPeriod t
 	svcInformer.AddEventHandler(reh)
 	informers = append(informers, svcInformer)
 
+	secretInformer := factory.Core().V1().Secrets().Informer()
+	secretInformer.AddEventHandler(reh)
+	informers = append(informers, secretInformer)
+
 	manbaIngInformer := manbaFactory.Configuration().V1beta1().ManbaIngresses().Informer()
 	manbaIngInformer.AddEventHandler(reh)
 	informers = append(informers, manbaIngInformer)

@@ -7,11 +7,10 @@ replace k8s.io/client-go v11.0.0+incompatible => k8s.io/client-go v0.0.0-2019091
 require (
 	github.com/eapache/channels v1.1.0
 	github.com/eapache/queue v1.1.0 // indirect
-	github.com/emirpasic/gods v1.12.0
+	github.com/emirpasic/gods v1.12.0 // indirect
 	github.com/fagongzi/gateway v2.5.1+incompatible
 	github.com/fagongzi/grpcx v1.1.0 // indirect
 	github.com/fagongzi/log v0.0.0-20191122063922-293b75312445 // indirect
-	github.com/fagongzi/manba v2.5.1+incompatible
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/hashicorp/go-memdb v1.1.0
 	github.com/hbagdi/deck v1.0.2
@@ -19,10 +18,10 @@ require (
 	github.com/labstack/gommon v0.3.0 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.0.0
-	github.com/prometheus/tsdb v0.7.1
 	github.com/sony/sonyflake v1.0.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.6.2
+	github.com/stretchr/testify v1.5.1
 	github.com/valyala/fasttemplate v1.1.0 // indirect
 	github.com/yudai/gojsondiff v1.0.0
 	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect

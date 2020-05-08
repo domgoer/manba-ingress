@@ -36,7 +36,7 @@ func (in *ManbaIngress) DeepCopyInto(out *ManbaIngress) {
 	out.TypeMeta = in.TypeMeta
 	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
 	inSpec, outSpec := in.Spec, out.Spec
-	deepcopy(inSpec, outSpec)
+	deepcopy(&inSpec, &outSpec)
 }
 
 func deepcopy(in, out interface{}) {

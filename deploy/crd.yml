@@ -17,6 +17,15 @@ spec:
         spec:
           type: object
           properties:
+            tls:
+              type: object
+              properties:
+                hosts:
+                  type: array
+                  items:
+                    type: string
+                secretName:
+                  type: string
             http:
               type: array
               items:

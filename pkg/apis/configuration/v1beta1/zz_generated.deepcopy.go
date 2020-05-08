@@ -311,6 +311,7 @@ func (in *ManbaIngressSpec) DeepCopyInto(out *ManbaIngressSpec) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	in.TLS.DeepCopyInto(&out.TLS)
 	return
 }
 

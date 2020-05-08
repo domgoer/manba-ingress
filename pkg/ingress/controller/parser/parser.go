@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	configurationv1beta1 "github.com/domgoer/manba-ingress/pkg/apis/configuration/v1beta1"
+	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 
 	"github.com/domgoer/manba-ingress/pkg/ingress/store"
 	"github.com/domgoer/manba-ingress/pkg/utils"
@@ -210,6 +211,12 @@ func (p *Parser) parseIngressRules(
 					} else {
 						api.Method = "*"
 					}
+					_, _, err := p.getTLS(api.Domain, ingress.Namespace, ingressSpec.TLS)
+					if err != nil {
+						glog.Errorf("getting secret failed, err: %v", err)
+					} else {
+						// TODO: set tls
+					}
 
 					// append to list
 					apis = append(apis, &api)
@@ -268,6 +275,23 @@ func (p *Parser) parseIngressRules(
 	}, nil
 }
 
+func (p *Parser) getTLS(host, namespace string, tls networkingv1beta1.IngressTLS) (certData []byte, keyData []byte, err error) {
+	for _, h := range tls.Hosts {
+		if host == h {
+			var secret *corev1.Secret
+			secret, err = p.store.GetSecret(namespace, tls.SecretName)
+			if err != nil {
+				return
+			}
+
+			certData = secret.Data["tls.crt"]
+			keyData = secret.Data["tls.key"]
+			return
+		}
+	}
+	return
+}
+
 func (p *Parser) fillOverride(service *Service) error {
 	cls := service.Cluster
 	namespace := cls.Namespace
@@ -301,19 +325,19 @@ func (p *Parser) fillOverride(service *Service) error {
 	for _, api := range service.APIs {
 		rule := api.HTTPRule
 		for _, r := range api.HTTPRule.Route {
-			p := Proxy{
+			proxy := Proxy{
 				ClusterName: service.Cluster.Name,
 			}
 
-			p.fromManbaHTTPRule(&rule)
-			p.fromManbaHTTPRoute(&r)
+			proxy.fromManbaHTTPRule(&rule)
+			proxy.fromManbaHTTPRoute(&r)
 
 			// ini map
 			if api.Proxies == nil {
 				api.Proxies = make(map[string]Proxy)
 			}
-			if _, ok := api.Proxies[p.ClusterName]; !ok {
-				api.Proxies[p.ClusterName] = p
+			if _, ok := api.Proxies[proxy.ClusterName]; !ok {
+				api.Proxies[proxy.ClusterName] = proxy
 			}
 		}
 
