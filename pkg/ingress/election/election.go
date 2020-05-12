@@ -21,16 +21,23 @@ const (
 	renewDeadline = time.Second * 10
 )
 
+// Config used to configure leader election
 type Config struct {
+	// ElectionID unique id
 	ElectionID        string
+	// ResourceName k8s resource type, default is configmap
 	ResourceName      string
+	// ResourceNamespace set namespace for election config file
 	ResourceNamespace string
-
+	// Callbacks monitor the master-slave election events
 	Callbacks leaderelection.LeaderCallbacks
 }
 
+// Elector interface
 type Elector interface {
+	// IsLeader return true if instance is leader
 	IsLeader() bool
+	// Run start leader election
 	Run(context.Context)
 }
 

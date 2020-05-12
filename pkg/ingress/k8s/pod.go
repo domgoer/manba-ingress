@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 
+	corev1 "k8s.io/api/core/v1"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
@@ -36,6 +38,42 @@ func GetPodDetails(kubeClient kubernetes.Interface) (*PodInfo, error) {
 	return &PodInfo{
 		Name:      podName,
 		Namespace: podNs,
+		NodeIP:    GetNodeIPOrName(kubeClient, pod.Spec.NodeName),
 		Labels:    pod.GetLabels(),
 	}, nil
+}
+
+// GetNodeIPOrName returns the IP address or the name of a node in the cluster
+func GetNodeIPOrName(kubeClient kubernetes.Interface, name string) string {
+	node, err := kubeClient.CoreV1().Nodes().Get(name, metav1.GetOptions{})
+	if err != nil {
+		return ""
+	}
+
+	ip := ""
+
+	for _, address := range node.Status.Addresses {
+		if address.Type == corev1.NodeExternalIP {
+			if address.Address != "" {
+				ip = address.Address
+				break
+			}
+		}
+	}
+
+	// Report the external IP address of the node
+	if ip != "" {
+		return ip
+	}
+
+	for _, address := range node.Status.Addresses {
+		if address.Type == corev1.NodeInternalIP {
+			if address.Address != "" {
+				ip = address.Address
+				break
+			}
+		}
+	}
+
+	return ip
 }
