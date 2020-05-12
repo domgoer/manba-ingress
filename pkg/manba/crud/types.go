@@ -1,8 +1,5 @@
 package crud
 
-import "github.com/hbagdi/deck/crud"
-
-type t string
 
 // Kind represents Kind of an entity or object.
 type Kind string
@@ -35,7 +32,7 @@ type Event struct {
 	OldObj interface{}
 }
 
-func eventFromArg(arg crud.Arg) Event {
+func eventFromArg(arg Arg) Event {
 	event, ok := arg.(Event)
 	if !ok {
 		panic("unexpected type, expected diff.Event")
