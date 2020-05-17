@@ -58,10 +58,10 @@ type ManbaHTTPRule struct {
 
 type ManbaHTTPMatch struct {
 	Host  string               `json:"host,omitempty"`
-	Rules []MatchHTTPMatchRule `json:"rules,omitempty"`
+	Rules []ManbaHTTPMatchRule `json:"rules,omitempty"`
 }
 
-type MatchHTTPMatchRule struct {
+type ManbaHTTPMatchRule struct {
 	URI       ManbaHTTPURIMatch `json:"uri,omitempty"`
 	Method    *string           `json:"method,omitempty"`
 	MatchType string            `json:"match_type,omitempty"`

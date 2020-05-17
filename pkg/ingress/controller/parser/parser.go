@@ -154,9 +154,7 @@ func (p *Parser) Build() (*ManbaState, error) {
 
 		for _, server := range service.Servers {
 			if check(server.Addr) {
-				for _, svr := range service.Servers {
-					state.Servers = append(state.Servers, *svr)
-				}
+				state.Servers = append(state.Servers, *server)
 			}
 		}
 	}
@@ -519,7 +517,6 @@ func getEndpoints(
 			}
 		}
 	}
-
 	glog.V(3).Infof("endpoints found: %v", upsServers)
 	return upsServers
 }
