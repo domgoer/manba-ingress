@@ -44,12 +44,12 @@ spec:
       rules:
       - uri:
           pattern: /
-          method: GET
+        method: GET
     - host: github.domgoer.io
       rules:
         - uri:
             pattern: /blog
-            method: POST
+          method: POST
     rewrite:
       uri: /domgoer/blog
     accessControl:
