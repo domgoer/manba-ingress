@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-
 func Test_clusterPostAction_Create(t *testing.T) {
 	action := clusterPostAction{
 		currentState: manbaState,

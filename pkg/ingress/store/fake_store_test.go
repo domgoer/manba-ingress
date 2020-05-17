@@ -136,12 +136,12 @@ func TestFakeStoreGetManbaIngress(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, store)
 
-	i, err := store.GetManbaIngress("default","foo")
-	assert.Nil(t,err)
-	assert.NotNil(t,i)
-	i, err = store.GetManbaIngress("default","do-not-exist")
-	assert.NotNil(t,err)
-	assert.Nil(t,i)
+	i, err := store.GetManbaIngress("default", "foo")
+	assert.Nil(t, err)
+	assert.NotNil(t, i)
+	i, err = store.GetManbaIngress("default", "do-not-exist")
+	assert.NotNil(t, err)
+	assert.Nil(t, i)
 }
 
 func TestFakeStoreGetManbaCluster(t *testing.T) {
@@ -156,10 +156,10 @@ func TestFakeStoreGetManbaCluster(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, store)
 
-	i, err := store.GetManbaCluster("default","foo")
-	assert.Nil(t,err)
-	assert.NotNil(t,i)
-	i, err = store.GetManbaCluster("default","do-not-exist")
-	assert.NotNil(t,err)
-	assert.Nil(t,i)
+	i, err := store.GetManbaCluster("default", "foo")
+	assert.Nil(t, err)
+	assert.NotNil(t, i)
+	i, err = store.GetManbaCluster("default", "do-not-exist")
+	assert.NotNil(t, err)
+	assert.Nil(t, i)
 }

@@ -15,8 +15,8 @@ func Test_bindPostAction_Create(t *testing.T) {
 
 	_, err := action.Create(&state.Bind{
 		Bind: metapb.Bind{
-			ClusterID:1,
-			ServerID:1,
+			ClusterID: 1,
+			ServerID:  1,
 		},
 		Metadata: state.Metadata{},
 	})
@@ -32,8 +32,8 @@ func Test_bindPostAction_Delete(t *testing.T) {
 	}
 	arg := &state.Bind{
 		Bind: metapb.Bind{
-			ClusterID:2,
-			ServerID:2,
+			ClusterID: 2,
+			ServerID:  2,
 		},
 		Metadata: state.Metadata{},
 	}

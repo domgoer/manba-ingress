@@ -12,19 +12,19 @@ func TestIngressClassValidatorFuncFromObjectMeta(t *testing.T) {
 	validFunc := IngressClassValidatorFuncFromObjectMeta("work")
 
 	shouldTrue := validFunc(&metav1.ObjectMeta{
-		Annotations:map[string]string{
+		Annotations: map[string]string{
 			"kubernetes.io/ingress.class": "work",
 		},
 	})
 
 	shouldFalse := validFunc(&metav1.ObjectMeta{
-		Annotations:map[string]string{
+		Annotations: map[string]string{
 			"kubernetes.io/ingress.class": "not-workd",
 		},
 	})
 
-	assert.True(t,shouldTrue)
-	assert.False(t,shouldFalse)
+	assert.True(t, shouldTrue)
+	assert.False(t, shouldFalse)
 }
 
 func TestIngressClassValidatorFunc(t *testing.T) {
@@ -44,6 +44,6 @@ func TestIngressClassValidatorFunc(t *testing.T) {
 			},
 		},
 	})
-	assert.True(t,shouldTrue)
-	assert.False(t,shouldFalse)
+	assert.True(t, shouldTrue)
+	assert.False(t, shouldFalse)
 }

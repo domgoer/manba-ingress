@@ -1,6 +1,5 @@
 package crud
 
-
 // Kind represents Kind of an entity or object.
 type Kind string
 

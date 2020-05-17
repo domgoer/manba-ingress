@@ -24,9 +24,9 @@ const (
 // Config used to configure leader election
 type Config struct {
 	// ElectionID unique id
-	ElectionID        string
+	ElectionID string
 	// ResourceName k8s resource type, default is configmap
-	ResourceName      string
+	ResourceName string
 	// ResourceNamespace set namespace for election config file
 	ResourceNamespace string
 	// Callbacks monitor the master-slave election events
