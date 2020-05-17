@@ -275,7 +275,8 @@ func TestParser_Build(t *testing.T) {
 	}
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "test-secret",
+			Name:      "test-secret",
+			Namespace: "default",
 		},
 	}
 	fakeStore, err := store.NewFakeStore([]runtime.Object{service, endpoint, secret}, []runtime.Object{ingress, cluster})

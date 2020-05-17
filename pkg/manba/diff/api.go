@@ -13,7 +13,7 @@ const (
 func (sc *Syncer) deleteAPIs() error {
 	apis, err := sc.currentState.APIs.GetAll()
 	if err != nil {
-		errors.Wrap(err, "fetching apis from state")
+		return errors.Wrap(err, "fetching apis from state")
 	}
 
 	for _, api := range apis {

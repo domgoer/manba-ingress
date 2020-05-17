@@ -13,7 +13,7 @@ const (
 func (sc *Syncer) deleteRoutings() error {
 	routings, err := sc.currentState.Routings.GetAll()
 	if err != nil {
-		errors.Wrap(err, "fetching routings from state")
+		return errors.Wrap(err, "fetching routings from state")
 	}
 
 	for _, routing := range routings {

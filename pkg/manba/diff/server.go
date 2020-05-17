@@ -13,7 +13,7 @@ const (
 func (sc *Syncer) deleteServers() error {
 	servers, err := sc.currentState.Servers.GetAll()
 	if err != nil {
-		errors.Wrap(err, "fetching servers from state")
+		return errors.Wrap(err, "fetching servers from state")
 	}
 
 	for _, server := range servers {

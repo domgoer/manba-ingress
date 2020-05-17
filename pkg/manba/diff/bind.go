@@ -13,7 +13,7 @@ const (
 func (sc *Syncer) deleteBinds() error {
 	binds, err := sc.currentState.Binds.GetAll()
 	if err != nil {
-		errors.Wrap(err, "fetching binds from state")
+		return errors.Wrap(err, "fetching binds from state")
 	}
 
 	for _, bind := range binds {

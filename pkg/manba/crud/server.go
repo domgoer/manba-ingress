@@ -62,11 +62,3 @@ func (c *serverRawAction) Update(arg Arg) (Arg, error) {
 	_, err := cb.Use(server.Server).Commit()
 	return server, err
 }
-
-func serverFromStruct(arg Event) *state.Server {
-	server, ok := arg.Obj.(*state.Server)
-	if !ok {
-		panic("unexpected type, expected *state.server")
-	}
-	return server
-}

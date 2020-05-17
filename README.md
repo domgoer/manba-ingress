@@ -1,5 +1,7 @@
 # Manba Ingress (Still In Progress)
 
+![Go](https://github.com/domgoer/manba-ingress/workflows/Go/badge.svg)
+
 Use [Manba](https://github.com/fagongzi/manba) For Kubernetes Ingress.
 
 Configure `api`, `routing`, `cluster`, `server` by using Custom Resource Definitions(CRDs)

@@ -62,11 +62,3 @@ func (c *clusterRawAction) Update(arg Arg) (Arg, error) {
 	_, err := cb.Use(cluster.Cluster).Commit()
 	return cluster, err
 }
-
-func clusterFromStruct(arg Event) *state.Cluster {
-	cluster, ok := arg.Obj.(*state.Cluster)
-	if !ok {
-		panic("unexpected type, expected *state.cluster")
-	}
-	return cluster
-}

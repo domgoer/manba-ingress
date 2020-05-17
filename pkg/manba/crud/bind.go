@@ -57,11 +57,3 @@ func (c *bindRawAction) Delete(arg Arg) (Arg, error) {
 func (c *bindRawAction) Update(arg Arg) (Arg, error) {
 	return nil, nil
 }
-
-func bindFromStruct(arg Event) *state.Bind {
-	bind, ok := arg.Obj.(*state.Bind)
-	if !ok {
-		panic("unexpected type, expected *state.bind")
-	}
-	return bind
-}

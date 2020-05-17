@@ -62,11 +62,3 @@ func (c *routingRawAction) Update(arg Arg) (Arg, error) {
 	_, err := cb.Use(routing.Routing).Commit()
 	return routing, err
 }
-
-func routingFromStruct(arg Event) *state.Routing {
-	routing, ok := arg.Obj.(*state.Routing)
-	if !ok {
-		panic("unexpected type, expected *state.routing")
-	}
-	return routing
-}

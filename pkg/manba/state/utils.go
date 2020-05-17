@@ -78,5 +78,8 @@ func multiIndexLookupUsingTxn(txn *memdb.Txn, tableName string,
 }
 
 func id2Str(id uint64) string {
+	if id == 0 {
+		return ""
+	}
 	return strconv.Itoa(int(id))
 }

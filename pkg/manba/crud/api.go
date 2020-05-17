@@ -62,11 +62,3 @@ func (c *apiRawAction) Update(arg Arg) (Arg, error) {
 	_, err := cb.Use(api.API).Commit()
 	return api, err
 }
-
-func apiFromStruct(arg Event) *state.API {
-	api, ok := arg.Obj.(*state.API)
-	if !ok {
-		panic("unexpected type, expected *state.api")
-	}
-	return api
-}

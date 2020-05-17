@@ -13,7 +13,7 @@ const (
 func (sc *Syncer) deleteClusters() error {
 	clusters, err := sc.currentState.Clusters.GetAll()
 	if err != nil {
-		errors.Wrap(err, "fetching clusters from state")
+		return errors.Wrap(err, "fetching clusters from state")
 	}
 
 	for _, cluster := range clusters {
